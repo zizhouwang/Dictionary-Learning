@@ -16,8 +16,11 @@ from numpy.linalg import norm
 import sys
 from sklearn import preprocessing
 from sklearn.neighbors import NearestNeighbors
+import time
 
-np.random.seed(random_state)
+t=time.time()
+
+np.random.seed(int(t)%100)
 
 n_classes = 10
 
@@ -49,36 +52,40 @@ def get_diff_and_degree_of_sparse(Y_all,coder,caled_number):
     Y_diff_num=np.zeros(10)
     X_nonzeros_num=np.zeros(10)
     for i in range(n_classes):
-        print(i)
-        sys.stdout.flush()
+        # print(i)
         end+=caled_number[i]
         X_part=(coder.transform(Y_all.T[start:end])).T
         Y_constructed_part=np.dot(D,X_part)
         Y_diff_part=Y_all[:,start:end]-Y_constructed_part
         # temp=Y_diff_all[:,start:end]
-        Y_diff_num[i]=Y_diff_part.sum()
+        Y_diff_num[i]=abs(Y_diff_part).sum()
         # temp1=X_all[:,start:end]
         X_nonzeros_num[i]=X_part.nonzero()[0].shape[0]
         start+=caled_number[i]
     print(Y_diff_num)
     print(X_nonzeros_num)
     pdb.set_trace()
+    sys.stdout.flush()
 
-def get_part_data_for_observe():
+def get_part_data_and_observe(coder):
     Y_part=[]
     indexs=list([])
+    caled_number=np.zeros(n_classes,dtype=int)
+    one_class_number=500
     for i in range(n_classes):
+        caled_number[i]=one_class_number
         label_indexs_part=np.array(np.where(labels==i))[0]
-
-
+        np.random.shuffle(label_indexs_part)
+        indexs.extend(label_indexs_part[0:one_class_number])
+    Y_part=np.array(data[indexs],dtype=float).transpose()/255.
+    Y_part = preprocessing.normalize(Y_part.T, norm='l2').T*5
+    get_diff_and_degree_of_sparse(Y_part,coder,caled_number)
 
 """ Run 5 times with different random selections """
 tab_unlabelled = np.zeros(1)
 tab_test = np.zeros(1)
 
 for random_state in range (1):
-    zero_label_indexs=np.array(np.where(labels==0))[0]
-    pdb.set_trace()
     # np.random.shuffle(zero_label_indexs)
     index = list([])
     start_train_number=2000
@@ -106,7 +113,6 @@ for random_state in range (1):
         index_l.extend(index[all_number*i:all_number*i +start_train_number])    
     #end 10个类别，每个类别有200个下标，从每个类别的200个下标随机取20个下标，该下标用于labels
     y_labelled = labels[index_l]
-    pdb.set_trace()
     n_labelled = len(y_labelled)
     Y_labelled = np.array(data[index_l],dtype = float).transpose()/255.
     index_u = list([])
@@ -150,9 +156,11 @@ for random_state in range (1):
     
     """ Start the process, initialize dictionary """
     # D = initialize_D(Y_all, n_atoms, y_labelled,n_labelled)
-    D = initialize_single_D(Y_all, n_atoms, y_labelled,n_labelled,all_number,D_index=0)
-    D = norm_cols_plus_petit_1(D,c)
-    
+    Ds=list([])
+    for i in range(n_classes):
+        D = initialize_single_D(Y_all, n_atoms, y_labelled,n_labelled,all_number,D_index=i)
+        D = norm_cols_plus_petit_1(D,c)
+        Ds.extend([D])
     """ Label matrix for labelled samples """    
     # H = -np.ones((n_classes, n_labelled)).astype(float)
     # for i in range(n_labelled):
@@ -164,21 +172,33 @@ for random_state in range (1):
     #     y_jck[k,:,k] = 1.
        
     """ Initialize Sparse code X_all """
-    coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd')
-    X_single =(coder.transform(Y_all.T[0:start_train_number])).T #2000个列向量 每个列向量是一个图像的稀疏表征
     
     print("initializing classifier ... done")
-    caled_number=np.zeros(n_classes,dtype=int)
-    for i in range(n_classes):
-        caled_number[i]=start_train_number
-    for i in range(60000):
+    # caled_number=np.zeros(n_classes,dtype=int)
+    # for i in range(n_classes):
+    #     caled_number[i]=start_train_number
+    for i in range(3000):
         for j in range(n_classes):
             print("start update")
-            start=start_train_number*j+i*j
-            end=start+start_train_number+i
+            start=(start_train_number+i)*j
+            end=start+(start_train_number+i)
+            if j!=0:
+                zero_label_indexs=np.array(np.where(labels==j))[0]
+                np.random.shuffle(zero_label_indexs)
+                new_index=[zero_label_indexs[0]]
+                new_y=np.array(data[new_index],dtype = float).transpose()/255.
+                Y_all=np.hstack((Y_all[:,0:end],new_y,Y_all[:,end:]))
+                continue
+            D=Ds[j]
+            coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd')
+            X_single =(coder.transform(Y_all.T[start:end])).T #X_single的每个列向量是一个图像的稀疏表征
+            if j==0 and i%300==0:
+                print("start the observation for dictionary of index "+str(j)+" and i="+str(i))
+                get_part_data_and_observe(coder)
             the_B=np.dot(Y_all[:,start:end],X_single.T)
             the_C=np.zeros((n_atoms,n_atoms))
             the_C=np.dot(X_single,X_single.T)
+            zero_label_indexs=np.array(np.where(labels==j))[0]
             np.random.shuffle(zero_label_indexs)
             new_index=[zero_label_indexs[0]]
             new_y=np.array(data[new_index],dtype = float).transpose()/255.
@@ -191,15 +211,10 @@ for random_state in range (1):
             new_D=np.dot(new_B,new_C)
             new_D = norm_cols_plus_petit_1(new_D,c)
             D=np.copy(new_D)
-            coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd',transform_max_iter=1000)
+            Ds[j]=D
             Y_all=np.hstack((Y_all[:,0:end],new_y,Y_all[:,end:]))
-            caled_number[j]+=1
-            # aaa =(coder.transform(new_y.T)).T
-            # bbb =(coder.transform(Y_all.T[42:44])).T
-            # X_single =(coder.transform(Y_all.T[start:end+1])).T #X_single:2000x201
-            # aaa =(coder.transform(Y_all.T)).T
-            get_diff_and_degree_of_sparse(Y_all,coder,caled_number)
-            pdb.set_trace()
+            # coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd',transform_max_iter=1000)
+            # caled_number[j]+=1
             # print("D_sum:"+str(D.sum()))
             # print("X_all_sum:"+str(X_single.sum()))
 
