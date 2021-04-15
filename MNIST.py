@@ -64,8 +64,8 @@ def get_diff_and_degree_of_sparse(Y_all,coder,caled_number):
         start+=caled_number[i]
     print(Y_diff_num)
     print(X_nonzeros_num)
-    pdb.set_trace()
     sys.stdout.flush()
+    # pdb.set_trace()
 
 def get_part_data_and_observe(coder):
     Y_part=[]
@@ -157,6 +157,9 @@ for random_state in range (1):
     """ Start the process, initialize dictionary """
     # D = initialize_D(Y_all, n_atoms, y_labelled,n_labelled)
     Ds=list([])
+    Bs=np.zeros[n_classes]
+    Cs=np.zeros[n_classes]
+    pdb.set_trace()
     for i in range(n_classes):
         D = initialize_single_D(Y_all, n_atoms, y_labelled,n_labelled,all_number,D_index=i)
         D = norm_cols_plus_petit_1(D,c)
@@ -179,7 +182,9 @@ for random_state in range (1):
     #     caled_number[i]=start_train_number
     for i in range(3000):
         for j in range(n_classes):
-            print("start update")
+            # print("start update")
+            # print(i)
+            sys.stdout.flush()
             start=(start_train_number+i)*j
             end=start+(start_train_number+i)
             if j!=0:
@@ -191,13 +196,15 @@ for random_state in range (1):
                 continue
             D=Ds[j]
             coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd')
-            X_single =(coder.transform(Y_all.T[start:end])).T #X_single的每个列向量是一个图像的稀疏表征
             if j==0 and i%300==0:
                 print("start the observation for dictionary of index "+str(j)+" and i="+str(i))
                 get_part_data_and_observe(coder)
-            the_B=np.dot(Y_all[:,start:end],X_single.T)
-            the_C=np.zeros((n_atoms,n_atoms))
-            the_C=np.dot(X_single,X_single.T)
+            if i==0:
+                X_single =(coder.transform(Y_all.T[start:end])).T #X_single的每个列向量是一个图像的稀疏表征
+                Bs[j]=np.dot(Y_all[:,start:end],X_single.T)
+                Cs[j]=np.dot(X_single,X_single.T)
+            the_B=Bs[j]
+            the_C=Cs[j]
             zero_label_indexs=np.array(np.where(labels==j))[0]
             np.random.shuffle(zero_label_indexs)
             new_index=[zero_label_indexs[0]]
@@ -208,6 +215,8 @@ for random_state in range (1):
             new_x=(coder.transform(new_y.T)).T
             new_B=the_B+np.dot(new_y,new_x.T)
             new_C=np.array(the_C-(np.matrix(the_C)*np.matrix(new_x)*np.matrix(new_x.T)*np.matrix(the_C))/(np.matrix(new_x.T)*np.matrix(the_C)*np.matrix(new_x)+1)) #matrix inversion lemma(Woodbury matrix identity)
+            Bs[j]=new_B
+            Cs[j]=new_C
             new_D=np.dot(new_B,new_C)
             new_D = norm_cols_plus_petit_1(new_D,c)
             D=np.copy(new_D)
@@ -215,8 +224,6 @@ for random_state in range (1):
             Y_all=np.hstack((Y_all[:,0:end],new_y,Y_all[:,end:]))
             # coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd',transform_max_iter=1000)
             # caled_number[j]+=1
-            # print("D_sum:"+str(D.sum()))
-            # print("X_all_sum:"+str(X_single.sum()))
 
     # with open('X_all.txt', mode='a+', encoding="utf-8") as w:
     #     w.write(json.dumps(X_all.tolist()))
