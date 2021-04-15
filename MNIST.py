@@ -71,7 +71,7 @@ def get_part_data_and_observe(coder):
     Y_part=[]
     indexs=list([])
     caled_number=np.zeros(n_classes,dtype=int)
-    one_class_number=500
+    one_class_number=300
     for i in range(n_classes):
         caled_number[i]=one_class_number
         label_indexs_part=np.array(np.where(labels==i))[0]
@@ -92,17 +92,19 @@ for random_state in range (1):
     start_test_number=300
     all_number=start_train_number+start_test_number
     #start
-    for i in range (n_classes):
-        num_i = 0
-        j = 0
-        while num_i < all_number:
-            j = j + 1
-            if labels[j] == i:
-                index.append(j)
-                num_i = num_i + 1
+    # for i in range (n_classes):
+    #     num_i = 0
+    #     j = 0
+    #     while num_i < all_number:
+    #         j = j + 1
+    #         if labels[j] == i:
+    #             index.append(j)
+    #             num_i = num_i + 1
     #end 10个类别，每个类别有300个下标，数组index总共三千个下标
     """ random selection for training set (20 labelled samples, 80 unlabelled samples) and testing set (100 samples) """
     #start
+    for i in range (n_classes):
+        index.extend(np.where(labels==i)[0][:all_number])
     index = np.array(index)
     for i in range (n_classes):
         np.random.shuffle(index[all_number*i:all_number*i + all_number])
@@ -157,9 +159,8 @@ for random_state in range (1):
     """ Start the process, initialize dictionary """
     # D = initialize_D(Y_all, n_atoms, y_labelled,n_labelled)
     Ds=list([])
-    Bs=np.zeros[n_classes]
-    Cs=np.zeros[n_classes]
-    pdb.set_trace()
+    Bs=np.empty((n_classes,data.shape[1],start_train_number))
+    Cs=np.empty((n_classes,start_train_number,start_train_number))
     for i in range(n_classes):
         D = initialize_single_D(Y_all, n_atoms, y_labelled,n_labelled,all_number,D_index=i)
         D = norm_cols_plus_petit_1(D,c)
@@ -182,32 +183,34 @@ for random_state in range (1):
     #     caled_number[i]=start_train_number
     for i in range(3000):
         for j in range(n_classes):
-            # print("start update")
-            # print(i)
+            if j==0:
+                print(i)
+            # if i%100==0 and j==0:
+            #     print(i)
             sys.stdout.flush()
             start=(start_train_number+i)*j
             end=start+(start_train_number+i)
             if j!=0:
-                zero_label_indexs=np.array(np.where(labels==j))[0]
-                np.random.shuffle(zero_label_indexs)
-                new_index=[zero_label_indexs[0]]
+                label_indexs_for_update=np.array(np.where(labels==j))[0][all_number:]
+                np.random.shuffle(label_indexs_for_update)
+                new_index=[label_indexs_for_update[0]]
                 new_y=np.array(data[new_index],dtype = float).transpose()/255.
                 Y_all=np.hstack((Y_all[:,0:end],new_y,Y_all[:,end:]))
                 continue
             D=Ds[j]
             coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd')
-            if j==0 and i%300==0:
+            if j==0 and (i%299==0 or i==0):
                 print("start the observation for dictionary of index "+str(j)+" and i="+str(i))
                 get_part_data_and_observe(coder)
             if i==0:
                 X_single =(coder.transform(Y_all.T[start:end])).T #X_single的每个列向量是一个图像的稀疏表征
                 Bs[j]=np.dot(Y_all[:,start:end],X_single.T)
-                Cs[j]=np.dot(X_single,X_single.T)
+                Cs[j]=np.linalg.inv(np.dot(X_single,X_single.T))
             the_B=Bs[j]
             the_C=Cs[j]
-            zero_label_indexs=np.array(np.where(labels==j))[0]
-            np.random.shuffle(zero_label_indexs)
-            new_index=[zero_label_indexs[0]]
+            label_indexs_for_update=np.array(np.where(labels==j))[0][all_number:]
+            np.random.shuffle(label_indexs_for_update)
+            new_index=[label_indexs_for_update[0]]
             new_y=np.array(data[new_index],dtype = float).transpose()/255.
             new_y=preprocessing.normalize(new_y.T, norm='l2').T*5
             new_y.reshape(n_features,1)
