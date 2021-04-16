@@ -165,6 +165,7 @@ for random_state in range (1):
         D = initialize_single_D(Y_all, n_atoms, y_labelled,n_labelled,all_number,D_index=i)
         D = norm_cols_plus_petit_1(D,c)
         Ds.extend([D])
+    D_init=np.copy(Ds[0])
     """ Label matrix for labelled samples """    
     # H = -np.ones((n_classes, n_labelled)).astype(float)
     # for i in range(n_labelled):
@@ -183,11 +184,9 @@ for random_state in range (1):
     #     caled_number[i]=start_train_number
     for i in range(3000):
         for j in range(n_classes):
-            if j==0:
+            if j==0 and i%100==0:
                 print(i)
-            # if i%100==0 and j==0:
-            #     print(i)
-            sys.stdout.flush()
+                sys.stdout.flush()
             start=(start_train_number+i)*j
             end=start+(start_train_number+i)
             if j!=0:
@@ -201,7 +200,9 @@ for random_state in range (1):
             coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd')
             if j==0 and (i%299==0 or i==0):
                 print("start the observation for dictionary of index "+str(j)+" and i="+str(i))
-                get_part_data_and_observe(coder)
+                # get_part_data_and_observe(coder)
+                D_diff_abs=abs(Ds[0]-D_init)
+                print(D_diff_abs.sum())
             if i==0:
                 X_single =(coder.transform(Y_all.T[start:end])).T #X_single的每个列向量是一个图像的稀疏表征
                 Bs[j]=np.dot(Y_all[:,start:end],X_single.T)
@@ -217,7 +218,7 @@ for random_state in range (1):
             new_label=labels[new_index]
             new_x=(coder.transform(new_y.T)).T
             new_B=the_B+np.dot(new_y,new_x.T)
-            new_C=np.array(the_C-(np.matrix(the_C)*np.matrix(new_x)*np.matrix(new_x.T)*np.matrix(the_C))/(np.matrix(new_x.T)*np.matrix(the_C)*np.matrix(new_x)+1)) #matrix inversion lemma(Woodbury matrix identity)
+            new_C=the_C-(np.matrix(the_C)*np.matrix(new_x)*np.matrix(new_x.T)*np.matrix(the_C))/(np.matrix(new_x.T)*np.matrix(the_C)*np.matrix(new_x)+1) #matrix inversion lemma(Woodbury matrix identity)
             Bs[j]=new_B
             Cs[j]=new_C
             new_D=np.dot(new_B,new_C)
