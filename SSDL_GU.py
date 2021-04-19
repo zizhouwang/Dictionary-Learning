@@ -663,8 +663,8 @@ def initialize_D(Y_all, n_atoms, y,n_labelled,seed=0):
     return D
 
 #Wzz
-def initialize_single_D(Y_all, n_atoms, y,n_labelled,all_number,seed=0,D_index=0):
-    return np.copy(Y_all[:,all_number*D_index:all_number*D_index+n_atoms])
+def initialize_single_D(Y_all, n_atoms, y,n_labelled,seed=0,D_index=0):
+    return np.copy(Y_all[:,n_atoms*D_index:n_atoms*D_index+n_atoms])
    
 """ This two following top optimize the classifier if the matrix is not invertible  """
 def dictionary_leanring_fo(variables,*arg):     

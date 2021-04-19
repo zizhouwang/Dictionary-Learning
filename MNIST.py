@@ -24,27 +24,20 @@ np.random.seed(int(t)%100)
 
 n_classes = 10
 data_count=60000
-""" Take mnist from keras """  
-# from keras.datasets import mnist
-# (data, labels), _ = mnist.load_data()
-# data = data.reshape(60000, 28*28).astype('float32')
-# labels = np.array(labels)
 
-start_train_number=2000
+start_train_number=200
 test_number=300
 all_number=start_train_number+test_number
-
-""" Or load mnist from downloaded data """  
-#data = np.load("MNIST/data_training.npy")
-#labels = np.load("MNIST/labels_training.npy")
-#labels = np.array(labels)
 imdb_data = np.load('mnist.npz')
-# 'train_data', 'train_label', 'test_data', 'test_label'
 imdb_data_dict = dict(zip(('test_data', 'train_data', 'train_label', 'test_label'), (imdb_data[k] for k in imdb_data)))
 
 train_data, train_label, test_data, test_label = imdb_data_dict['train_data'], imdb_data_dict['train_label'], imdb_data_dict['test_data'], imdb_data_dict['test_label']
 data=train_data.reshape(data_count, 28*28).astype('float32')
 labels=np.array(train_label)
+
+def load_local_json_to_obj(path):
+    str = open(path, encoding="utf-8").read()
+    return np.array(json.loads(str))
 
 def get_diff_and_degree_of_sparse(Y_all,coder,caled_number):
     start=0
@@ -143,11 +136,9 @@ for random_state in range (1):
     y_test = labels[index_t]
     n_test = len(y_test)
     Y_test = np.array(data[index_t],dtype = float).transpose()/255.
-    Y_all = np.hstack((Y_labelled,Y_unlabelled))
-    pdb.set_trace()
+    Y_train = np.hstack((Y_labelled,Y_unlabelled))
     """ Preprocessing (make each sample have 5 times norm unity) """
-    Y_all = preprocessing.normalize(Y_all.T, norm='l2').T*5
-    pdb.set_trace()
+    Y_train = preprocessing.normalize(Y_train.T, norm='l2').T*5
     Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*5
     """ Parameters in optimization  """
     n_atoms = start_train_number
@@ -164,107 +155,137 @@ for random_state in range (1):
     n_iter_du = 50 # number max of iteration in dictionary update
     n_iter = 15 # number max of general iteration
     
-    n_features = Y_all.shape[0]
-    
-    """ Contruct matrix for manifold structure preservation by LLE """
-    # Lc = Construct_L_sparse_code(Y_all, n_neighbor)
+    n_features = Y_train.shape[0]
+
+
+
+
     
     """ Start the process, initialize dictionary """
-    # D = initialize_D(Y_all, n_atoms, y_labelled,n_labelled)
-    Ds=list([])
-    Bs=np.empty((n_classes,data.shape[1],start_train_number))
-    Cs=np.empty((n_classes,start_train_number,start_train_number))
-    for i in range(n_classes):
-        D = initialize_single_D(Y_all, n_atoms, y_labelled,n_labelled,all_number,D_index=i)
-        D = norm_cols_plus_petit_1(D,c)
-        Ds.extend([D])
-    D_init=np.copy(Ds[0])
-    """ Label matrix for labelled samples """    
-    # H = -np.ones((n_classes, n_labelled)).astype(float)
-    # for i in range(n_labelled):
-    #     H[int(y_labelled[i]), i] = 1
-    
-    """ Pseudo-Label matrix for unlabelled samples """
-    # y_jck = -np.ones((n_classes, n_unlabelled, n_classes)).astype(float)
-    # for k in range (n_classes):
-    #     y_jck[k,:,k] = 1.
-       
-    """ Initialize Sparse code X_all """
-    
-    print("initializing classifier ... done")
-    # caled_number=np.zeros(n_classes,dtype=int)
+    # Ds=list([])
+    # Bs=np.empty((n_classes,data.shape[1],start_train_number))
+    # Cs=np.empty((n_classes,start_train_number,start_train_number))
     # for i in range(n_classes):
-    #     caled_number[i]=start_train_number
-    for i in range(3000):
-        for j in range(n_classes):
-            if j==0 and i%100==0:
-                print(i)
-            start=(start_train_number+i)*j
-            end=start+(start_train_number+i)
-            if j!=0:
-                label_indexs_for_update=np.array(np.where(labels==j))[0][all_number:]
-                np.random.shuffle(label_indexs_for_update)
-                new_index=[label_indexs_for_update[0]]
-                new_y=np.array(data[new_index],dtype = float).transpose()/255.
-                Y_all=np.hstack((Y_all[:,0:end],new_y,Y_all[:,end:]))
-                continue
-            D=Ds[j]
-            coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd')
-            if j==0 and (i%299==0 or i==0):
-                print("start the observation for dictionary of index "+str(j)+" and i="+str(i))
-                sys.stdout.flush()
-                get_part_data_and_observe(coder)
-                # D_diff_abs=abs(Ds[0]-D_init)
-                # print(D_diff_abs.sum())
-            if i==0:
-                X_single =(coder.transform(Y_all.T[start:end])).T #X_single的每个列向量是一个图像的稀疏表征
-                Bs[j]=np.dot(Y_all[:,start:end],X_single.T)
-                Cs[j]=np.linalg.inv(np.dot(X_single,X_single.T))
-            the_B=Bs[j]
-            the_C=Cs[j]
-            label_indexs_for_update=np.array(np.where(labels==j))[0][all_number:]
-            np.random.shuffle(label_indexs_for_update)
-            new_index=[label_indexs_for_update[0]]
-            new_y=np.array(data[new_index],dtype = float).transpose()/255.
-            new_y=preprocessing.normalize(new_y.T, norm='l2').T*5
-            new_y.reshape(n_features,1)
-            new_label=labels[new_index]
-            new_x=(coder.transform(new_y.T)).T
-            new_B=the_B+np.dot(new_y,new_x.T)
-            new_C=the_C-(np.matrix(the_C)*np.matrix(new_x)*np.matrix(new_x.T)*np.matrix(the_C))/(np.matrix(new_x.T)*np.matrix(the_C)*np.matrix(new_x)+1) #matrix inversion lemma(Woodbury matrix identity)
-            Bs[j]=new_B
-            Cs[j]=new_C
-            new_D=np.dot(new_B,new_C)
-            # new_D = norm_cols_plus_petit_1(new_D,c)
-            D=np.copy(new_D)
-            Ds[j]=D
-            Y_all=np.hstack((Y_all[:,0:end],new_y,Y_all[:,end:]))
-    # the_H=np.zeros((n_classes,data_count),dtype=int) #10,60000
-    # the_Q=np.zeros((n_atoms*n_classes,data_count),dtype=int) #2000,60000
-    # for i in range(data_count):
-    #     label=labels[i]
-    #     the_H[label,i]=1
-    #     the_Q[n_atoms*label:n_atoms*(label+1),i]=1
+    #     D = initialize_single_D(Y_train, n_atoms, y_labelled,n_labelled,D_index=i)
+    #     D = norm_cols_plus_petit_1(D,c)
+    #     Ds.extend([D])
+    # D_init=np.copy(Ds[0])
+    # # H = -np.ones((n_classes, n_labelled)).astype(float)
+    # # for i in range(n_labelled):
+    # #     H[int(y_labelled[i]), i] = 1
+    
+    # # y_jck = -np.ones((n_classes, n_unlabelled, n_classes)).astype(float)
+    # # for k in range (n_classes):
+    # #     y_jck[k,:,k] = 1.
+       
+    
+    # print("initializing classifier ... done")
+    # # caled_number=np.zeros(n_classes,dtype=int)
+    # # for i in range(n_classes):
+    # #     caled_number[i]=start_train_number
+    # for i in range(3000):
+    #     for j in range(n_classes):
+    #         if j==0 and i%100==0:
+    #             print(i)
+    #             sys.stdout.flush()
+    #         # start=(start_train_number+i)*j
+    #         # end=start+(start_train_number+i)
+    #         if j!=0:
+    #             # label_indexs_for_update=np.array(np.where(labels==j))[0][all_number:]
+    #             # np.random.shuffle(label_indexs_for_update)
+    #             # new_index=[label_indexs_for_update[0]]
+    #             # new_y=np.array(data[new_index],dtype = float).transpose()/255.
+    #             # Y_train=np.hstack((Y_train[:,0:end],new_y,Y_train[:,end:]))
+    #             continue
+    #         D=Ds[j]
+    #         coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd')
+    #         # if j==0 and (i%299==0 or i==0):
+    #             # print("start the observation for dictionary of index "+str(j)+" and i="+str(i))
+    #             # get_part_data_and_observe(coder)
+    #             # D_diff_abs=abs(Ds[0]-D_init)
+    #             # print(D_diff_abs.sum())
+    #         if i==0:
+    #             X_single =(coder.transform(Y_train.T[start_train_number*j:start_train_number*j+start_train_number])).T #X_single的每个列向量是一个图像的稀疏表征
+    #             Bs[j]=np.dot(Y_train[:,start_train_number*j:start_train_number*j+start_train_number],X_single.T)
+    #             Cs[j]=np.linalg.inv(np.dot(X_single,X_single.T))
+    #         the_B=Bs[j]
+    #         the_C=Cs[j]
+    #         label_indexs_for_update=np.array(np.where(labels==j))[0][all_number:]
+    #         np.random.shuffle(label_indexs_for_update)
+    #         new_index=[label_indexs_for_update[0]]
+    #         new_y=np.array(data[new_index],dtype = float).transpose()/255.
+    #         new_y=preprocessing.normalize(new_y.T, norm='l2').T*5
+    #         new_y.reshape(n_features,1)
+    #         new_label=labels[new_index]
+    #         new_x=(coder.transform(new_y.T)).T
+    #         new_B=the_B+np.dot(new_y,new_x.T)
+    #         new_C=the_C-(np.matrix(the_C)*np.matrix(new_x)*np.matrix(new_x.T)*np.matrix(the_C))/(np.matrix(new_x.T)*np.matrix(the_C)*np.matrix(new_x)+1) #matrix inversion lemma(Woodbury matrix identity)
+    #         Bs[j]=new_B
+    #         Cs[j]=new_C
+    #         new_D=np.dot(new_B,new_C)
+    #         # new_D = norm_cols_plus_petit_1(new_D,c)
+    #         D=np.copy(new_D)
+    #         Ds[j]=D
+    #         # Y_train=np.hstack((Y_train[:,0:end],new_y,Y_train[:,end:]))
+
     # D_all=np.zeros((data.shape[1],0))
     # for i in range(n_classes):
     #     D_all=np.hstack((D_all,np.copy(Ds[i])))
-
-    # with open('D_all.txt', mode='a+', encoding="utf-8") as w:
+    # with open('D_all_'+str(start_train_number)+'.txt', mode='a+', encoding="utf-8") as w:
+    #     w.seek(0)
+    #     w.truncate()
     #     w.write(json.dumps(D_all.tolist()))
+    # print("D_all saved")
 
-    # coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd')
-    # X_all=(coder.transform(data.T)).T
-    # X_all_T=X_all.T
-    # X_X_T_inv=np.linalg.inv(np.dot(X_all,X_all_T))
-    # the_W=np.dot(np.dot(the_H,X_all_T),X_X_T_inv) #10,20000
-    # the_A=np.dot(np.dot(the_Q,X_all_T),X_X_T_inv) #2000,20000
+
+
+
+
+
+    the_H=np.zeros((n_classes,data_count),dtype=int) #10,60000
+    the_Q=np.zeros((n_atoms*n_classes,data_count),dtype=int) #2000,60000
+    for i in range(data_count):
+        label=labels[i]
+        the_H[label,i]=1
+        the_Q[n_atoms*label:n_atoms*(label+1),i]=1
+
+    D_all = load_local_json_to_obj('D_all_'+str(start_train_number)+'.txt')
+    coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd')
+    Y_all=np.array(np.copy(data),dtype=float)/255.
+    Y_all = preprocessing.normalize(Y_all, norm='l2').T*5
+    # X_all=(coder.transform(Y_all.T)).T
+    # pdb.set_trace()
+    # with open('X_all_'+str(start_train_number)+'.txt', mode='a+', encoding="utf-8") as w:
+    #     w.seek(0)
+    #     w.truncate()
+    #     w.write(json.dumps(X_all.tolist()))
+    # print("X_all saved")
+    X_all = load_local_json_to_obj('X_all_'+str(start_train_number)+'.txt')
+    X_all_T=X_all.T
+    X_X_T_inv=np.linalg.inv(np.dot(X_all,X_all_T))
+    the_W=np.dot(np.dot(the_H,X_all_T),X_X_T_inv) #10,20000
+    the_A=np.dot(np.dot(the_Q,X_all_T),X_X_T_inv) #2000,20000
+    pdb.set_trace()
+    with open('the_W_'+str(start_train_number)+'.txt', mode='a+', encoding="utf-8") as w:
+        w.seek(0)
+        w.truncate()
+        w.write(json.dumps(the_W.tolist()))
+    print("the_W saved")
+    with open('the_A_'+str(start_train_number)+'.txt', mode='a+', encoding="utf-8") as w:
+        w.seek(0)
+        w.truncate()
+        w.write(json.dumps(the_A.tolist()))
+    print("the_A saved")
+
+
+
 
 
 
     # with open('X_all.txt', mode='a+', encoding="utf-8") as w:
     #     w.write(json.dumps(X_all.tolist()))
-    # with open('Y_all.txt', mode='a+', encoding="utf-8") as w:
-    #     w.write(json.dumps(Y_all.tolist()))
+    # with open('Y_train.txt', mode='a+', encoding="utf-8") as w:
+    #     w.write(json.dumps(Y_train.tolist()))
     # with open('D.txt', mode='a+', encoding="utf-8") as w:
     #     w.write(json.dumps(D.tolist()))
     # with open('W.txt', mode='a+', encoding="utf-8") as w:
