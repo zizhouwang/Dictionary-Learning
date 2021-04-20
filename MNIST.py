@@ -207,18 +207,20 @@ for random_state in range (1):
                 # D_diff_abs=abs(Ds[0]-D_init)
                 # print(D_diff_abs.sum())
             if i==0:
-                the_H=np.zeros((n_classes,Y_train.shape[1]),dtype=int) #10,60000
-                the_Q=np.zeros((n_atoms*n_classes,Y_train.shape[1]),dtype=int) #2000,60000
+                the_H=np.zeros((n_classes,Y_train.shape[1]),dtype=int)
+                the_Q=np.zeros((n_atoms*n_classes,Y_train.shape[1]),dtype=int)
                 for k in range(Y_train.shape[1]):
                     label=y_labelled[k]
                     the_H[label,k]=1
                     the_Q[n_atoms*label:n_atoms*(label+1),k]=1
                 X_single =(coder.transform(Y_train.T[start_train_number*j:start_train_number*j+start_train_number])).T #X_single的每个列向量是一个图像的稀疏表征
                 Bs[j]=np.dot(Y_train[:,start_train_number*j:start_train_number*j+start_train_number],X_single.T)
-                H_Bs[j]=np.dot(the_H[:,start_train_number*j:start_train_number*j+start_train_number],X_single.T)
-                Q_Bs[j]=np.dot(the_Q[:,start_train_number*j:start_train_number*j+start_train_number],X_single.T)
+                H_Bs[j]=np.dot(the_H[:,start_train_number*j:start_train_number*j+start_train_number],X_single.T)#10,200
+                Q_Bs[j]=np.dot(the_Q[:,start_train_number*j:start_train_number*j+start_train_number],X_single.T)#2000,200
                 Cs[j]=np.linalg.inv(np.dot(X_single,X_single.T))
             the_B=Bs[j]
+            the_H_B=H_Bs[j]
+            the_Q_B=Q_Bs[j]
             the_C=Cs[j]
             label_indexs_for_update=np.array(np.where(labels==j))[0][all_number:]
             np.random.shuffle(label_indexs_for_update)
@@ -227,10 +229,18 @@ for random_state in range (1):
             new_y=preprocessing.normalize(new_y.T, norm='l2').T*5
             new_y.reshape(n_features,1)
             new_label=labels[new_index]
+            new_h=np.zeros((n_classes,1))
+            new_h[new_label,0]=1
+            new_q=np.zeros((n_atoms*n_classes,1))
+            new_q[n_atoms*new_label:n_atoms*(new_label+1),0]=1
             new_x=(coder.transform(new_y.T)).T
             new_B=the_B+np.dot(new_y,new_x.T)
+            new_H_B=the_B+np.dot(new_h,new_x.T)
+            new_Q_B=the_B+np.dot(new_q,new_x.T)
             new_C=the_C-(np.matrix(the_C)*np.matrix(new_x)*np.matrix(new_x.T)*np.matrix(the_C))/(np.matrix(new_x.T)*np.matrix(the_C)*np.matrix(new_x)+1) #matrix inversion lemma(Woodbury matrix identity)
             Bs[j]=new_B
+            H_Bs[j]=new_H_B
+            Q_Bs[j]=new_Q_B
             Cs[j]=new_C
             new_D=np.dot(new_B,new_C)
             # new_D = norm_cols_plus_petit_1(new_D,c)
@@ -246,6 +256,22 @@ for random_state in range (1):
         w.truncate()
         w.write(json.dumps(D_all.tolist()))
     print("D_all saved")
+    H_all=np.zeros((data.shape[1],0))
+    for i in range(n_classes):
+        H_all=np.hstack((H_all,np.copy(H_Bs[i])))
+    with open('H_all_'+str(start_train_number)+'.txt', mode='a+', encoding="utf-8") as w:
+        w.seek(0)
+        w.truncate()
+        w.write(json.dumps(H_all.tolist()))
+    print("H_all saved")
+    Q_all=np.zeros((data.shape[1],0))
+    for i in range(n_classes):
+        Q_all=np.hstack((Q_all,np.copy(Q_Bs[i])))
+    with open('Q_all_'+str(start_train_number)+'.txt', mode='a+', encoding="utf-8") as w:
+        w.seek(0)
+        w.truncate()
+        w.write(json.dumps(Q_all.tolist()))
+    print("Q_all saved")
 
 
 
