@@ -43,7 +43,6 @@ images_test, labels_test = mndata.load_testing()
 # data=train_data.reshape(data_count, 28*28).astype('float32')
 data=np.array(images_test).astype('float32')
 labels=np.array(labels_test)
-pdb.set_trace()
 """ Parameters in optimization  """
 n_atoms = 200
 n_neighbor = 8
@@ -65,9 +64,9 @@ n_iter_du = 50 # number max of iteration in dictionary update
 n_iter = 15 # number max of general iteration
 
 D_all = load_local_json_to_obj('D_all_'+str(start_train_number)+'.txt')
-the_W = load_local_json_to_obj('the_W_'+str(start_train_number)+'.txt')
-the_A = load_local_json_to_obj('the_A_'+str(start_train_number)+'.txt')
-
+W_all = load_local_json_to_obj('W_all_'+str(start_train_number)+'.txt')
+A_all = load_local_json_to_obj('A_all_'+str(start_train_number)+'.txt')
+pdb.set_trace()
 indexs=np.array(np.where(labels==0))[0]
 np.random.shuffle(indexs)
 indexs=indexs[0:test_number]
@@ -75,7 +74,7 @@ Y_test=np.array(data[indexs],dtype=float).transpose()/255.
 Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*5
 coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd')
 X_test=(coder.transform(Y_test.T)).T
-the_H=np.dot(the_W,X_test)
+the_H=np.dot(W_all,X_test)
 right_num=0.
 for i in range(test_number):
     pre=the_H[:,i].argmax()
@@ -90,7 +89,7 @@ Y_test=np.array(data[indexs],dtype=float).transpose()/255.
 Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*5
 coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd')
 X_test=(coder.transform(Y_test.T)).T
-the_H=np.dot(the_W,X_test)
+the_H=np.dot(W_all,X_test)
 right_num=0.
 for i in range(test_number):
     pre=the_H[:,i].argmax()
