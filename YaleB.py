@@ -63,6 +63,7 @@ np.random.seed(int(t)%100)
 data_count=labels.shape[0]
 
 start_train_number=30
+update_times=100
 test_number=0
 all_number=start_train_number+test_number
 im_vec_len=307200
@@ -138,10 +139,11 @@ D_init=np.copy(Ds[0])
    
 
 print("initializing classifier ... done")
+start_t=time.time()
 # caled_number=np.zeros(n_classes,dtype=int)
 # for i in range(n_classes):
 #     caled_number[i]=start_train_number
-for i in range(100):
+for i in range(update_times):
     for j in range(n_classes):
         j_label=ind_to_lab_dir[j]
         if j==0 and i%100==0:
@@ -201,35 +203,36 @@ for i in range(100):
         Ws[j]=np.dot(new_H_B,new_C)
         As[j]=np.dot(new_Q_B,new_C)
         # Y_train=np.hstack((Y_train[:,0:end],new_y,Y_train[:,end:]))
-
+end_t=time.time()
+print("train_time : "+str(end_t-start_t))
 D_all=Ds
 D_all=D_all.transpose((0,2,1))
 D_all=D_all.reshape(-1,im_vec_len).T
-np.save('D_all_YaleB_'+str(start_train_number),D_all)
+np.save('D_all_YaleB_'+str(update_times),D_all)
 print("D_all saved")
 W_all=Ws
 W_all=W_all.transpose((0,2,1))
 W_all=W_all.reshape(-1,n_classes).T
-np.save('W_all_YaleB_'+str(start_train_number),W_all)
+np.save('W_all_YaleB_'+str(update_times),W_all)
 print("W_all saved")
 A_all=As
 A_all=A_all.transpose((0,2,1))
 A_all=A_all.reshape(-1,n_classes*n_atoms).T
-np.save('A_all_YaleB_'+str(start_train_number),A_all)
+np.save('A_all_YaleB_'+str(update_times),A_all)
 print("A_all saved")
 
     # D_all=np.zeros((data.shape[1],0))
     # for i in range(n_classes):
     #     D_all=np.hstack((D_all,np.copy(Ds[i])))
-    # np.save('D_all_YaleB_'+str(start_train_number),D_all)
+    # np.save('D_all_YaleB_'+str(update_times),D_all)
     # print("D_all saved")
     # W_all=np.zeros((Ws.shape[1],0))
     # for i in range(n_classes):
     #     W_all=np.hstack((W_all,np.copy(Ws[i])))
-    # np.save('W_all_YaleB_'+str(start_train_number),W_all)
+    # np.save('W_all_YaleB_'+str(update_times),W_all)
     # print("W_all saved")
     # A_all=np.zeros((As.shape[1],0))
     # for i in range(n_classes):
     #     A_all=np.hstack((A_all,np.copy(As[i])))
-    # np.save('A_all_YaleB_'+str(start_train_number),A_all)
+    # np.save('A_all_YaleB_'+str(update_times),A_all)
     # print("A_all saved")
