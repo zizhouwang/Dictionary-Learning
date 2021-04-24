@@ -227,6 +227,7 @@ for random_state in range (1):
             label_indexs_for_update=np.array(np.where(labels==j))[0][all_number:]
             np.random.shuffle(label_indexs_for_update)
             new_index=[label_indexs_for_update[0]]
+            pdb.set_trace()
             new_y=np.array(data[new_index],dtype = float).transpose()/255.
             new_y=preprocessing.normalize(new_y.T, norm='l2').T*5
             new_y.reshape(n_features,1)
