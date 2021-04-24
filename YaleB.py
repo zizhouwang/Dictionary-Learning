@@ -21,6 +21,11 @@ from mnist import MNIST
 from PIL import Image
 import os
 
+def create_dir_if_not_exist(path):
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+
 def load_img(path):
     im = Image.open(path)    # 读取文件
     im_vec=np.asarray(im,dtype=float).T.reshape(-1,1)
@@ -38,8 +43,11 @@ labels=list([])
 file_paths=list([])
 lab_to_ind_dir={}
 ind_to_lab_dir={}
+w=192
+h=168
 for i in range(40):
-    dir_path="./ExtendedYaleB/yaleB"+str(i)
+    dir_path="./ExtendedYaleB_"+str(w)+"x"+str(h)+"/"+str(i)
+    # dir_path="./ExtendedYaleB/yaleB"+str(i)
     if os.path.isdir(dir_path):
         n_classes+=1
         classes.extend([i])
@@ -56,17 +64,39 @@ for i in range(n_classes):
     lab_to_ind_dir[classes[i]]=i
     ind_to_lab_dir[i]=classes[i]
 
+
+
+
+# ind=0
+# for path in file_paths:
+#     im=Image.open(path)
+#     label=labels[ind]
+#     create_dir_if_not_exist("./ExtendedYaleB_"+str(w)+"x"+str(h))
+#     create_dir_if_not_exist("./ExtendedYaleB_"+str(w)+"x"+str(h)+"/"+str(label))
+#     x=(640-w)/2
+#     y=(480-h)/2
+#     im_small=im.crop((x,y,x+w,y+h))
+#     im_small.save("./ExtendedYaleB_"+str(w)+"x"+str(h)+"/"+str(label)+path[23:])
+#     ind+=1
+# pdb.set_trace()
+
+
+
+
+
 t=time.time()
 
 np.random.seed(int(t)%100)
 
 data_count=labels.shape[0]
 
-start_train_number=30
-update_times=100
+start_train_number=15
+update_times=32
 test_number=0
 all_number=start_train_number+test_number
-im_vec_len=307200
+im_vec_len=w*h
+
+reg_mul=40
 
 index = list([])
 for i in classes:
@@ -93,16 +123,16 @@ for i in index_l:
         sys.stdout.flush()
     temp_process+=1
     im_vec=load_img(file_paths[i])
-    im_vec=im_vec/255.
+    # im_vec=im_vec/255.
     im_vec=im_vec.T[0]
     if im_vec.shape[0]!=im_vec_len:
         print("存在总像素不为307200的图像 程序暂停")
         pdb.set_trace()
     Y_labelled[:,ind]=im_vec
     ind+=1
-# Y_labelled = np.array([],dtype = float).transpose()/255.
 Y_train = Y_labelled
-Y_train = preprocessing.normalize(Y_train.T, norm='l2').T*5
+Y_train = preprocessing.normalize(Y_train.T, norm='l2').T*reg_mul
+# Y_train = preprocessing.normalize(Y_train.T, norm='l2').T
 n_atoms = start_train_number
 n_neighbor = 8
 lamda = 0.5
@@ -146,7 +176,7 @@ start_t=time.time()
 for i in range(update_times):
     for j in range(n_classes):
         j_label=ind_to_lab_dir[j]
-        if j==0 and i%100==0:
+        if j==0 and i%10==0:
             print(i)
             sys.stdout.flush()
         # start=(start_train_number+i)*j
@@ -178,8 +208,10 @@ for i in range(update_times):
         # np.random.shuffle(label_indexs_for_update)
         new_index=[label_indexs_for_update[i]]
         im_vec=load_img(file_paths[new_index][0])
-        new_y=np.array(im_vec,dtype = float)/255.
-        new_y=preprocessing.normalize(new_y.T, norm='l2').T*5
+        # im_vec=im_vec/255.
+        new_y=np.array(im_vec,dtype = float)
+        new_y=preprocessing.normalize(new_y.T, norm='l2').T*reg_mul
+        # new_y=preprocessing.normalize(new_y.T, norm='l2').T
         new_y.reshape(n_features,1)
         new_label=labels[new_index][0]
         new_h=np.zeros((n_classes,1))
@@ -197,7 +229,6 @@ for i in range(update_times):
         Q_Bs[j]=new_Q_B
         Cs[j]=new_C
         new_D=np.dot(new_B,new_C)
-        # new_D = norm_cols_plus_petit_1(new_D,c)
         D=np.copy(new_D)
         Ds[j]=D
         Ws[j]=np.dot(new_H_B,new_C)
@@ -208,17 +239,17 @@ print("train_time : "+str(end_t-start_t))
 D_all=Ds
 D_all=D_all.transpose((0,2,1))
 D_all=D_all.reshape(-1,im_vec_len).T
-np.save('D_all_YaleB_'+str(update_times),D_all)
+np.save('D_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times),D_all)
 print("D_all saved")
 W_all=Ws
 W_all=W_all.transpose((0,2,1))
 W_all=W_all.reshape(-1,n_classes).T
-np.save('W_all_YaleB_'+str(update_times),W_all)
+np.save('W_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times),W_all)
 print("W_all saved")
 A_all=As
 A_all=A_all.transpose((0,2,1))
 A_all=A_all.reshape(-1,n_classes*n_atoms).T
-np.save('A_all_YaleB_'+str(update_times),A_all)
+np.save('A_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times),A_all)
 print("A_all saved")
 
     # D_all=np.zeros((data.shape[1],0))

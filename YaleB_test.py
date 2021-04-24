@@ -38,8 +38,10 @@ labels=list([])
 file_paths=list([])
 lab_to_ind_dir={}
 ind_to_lab_dir={}
+w=300
+h=300
 for i in range(40):
-    dir_path="./ExtendedYaleB/yaleB"+str(i)
+    dir_path="./ExtendedYaleB_"+str(w)+"x"+str(h)+"/"+str(i)
     if os.path.isdir(dir_path):
         n_classes+=1
         classes.extend([i])
@@ -62,11 +64,11 @@ np.random.seed(int(t)%100)
 
 data_count=labels.shape[0]
 
-start_train_number=30
-update_times=100
+start_train_number=15
+update_times=32
 start_test_number=start_train_number+update_times
-test_number=200
-im_vec_len=307200
+test_number=17
+im_vec_len=w*h
 
 """ Parameters in optimization  """
 n_atoms = 200
@@ -88,8 +90,10 @@ n_iter_sp = 50 #number max of iteration in sparse coding
 n_iter_du = 50 # number max of iteration in dictionary update
 n_iter = 15 # number max of general iteration
 
-D_all=np.load('D_all_YaleB_'+str(update_times)+'.npy')
-W_all=np.load('W_all_YaleB_'+str(update_times)+'.npy')
+reg_mul=40
+
+D_all=np.load('D_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times)+'.npy')
+W_all=np.load('W_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times)+'.npy')
 # D_all=np.load('D_all_YaleB_init'+'.npy')
 # W_all=np.load('W_all_YaleB_init'+'.npy')
 # A_all=np.load('A_all_YaleB_'+str(update_times))
@@ -108,14 +112,15 @@ for cla in classes:
             sys.stdout.flush()
         temp_process+=1
         im_vec=load_img(file_paths[i])
-        im_vec=im_vec/255.
+        # im_vec=im_vec/255.
         im_vec=im_vec.T[0]
         if im_vec.shape[0]!=im_vec_len:
             print("存在总像素不为307200的图像 程序暂停")
             pdb.set_trace()
         Y_test[:,ind]=im_vec
         ind+=1
-    Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*5
+    Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*reg_mul
+    # Y_test = preprocessing.normalize(Y_test.T, norm='l2').T
     coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd')
     X_test=(coder.transform(Y_test.T)).T
     the_H=np.dot(W_all,X_test)
@@ -123,6 +128,7 @@ for cla in classes:
     for i in range(test_number):
         # pdb.set_trace()
         pre=the_H[:,i].argmax()
+        pdb.set_trace()
         if pre==label_index:
             right_num+=1.
     print('label : '+str(cla))
