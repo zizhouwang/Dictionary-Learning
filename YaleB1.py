@@ -48,6 +48,7 @@ h=168
 for i in range(40):
     dir_path="./ExtendedYaleB_"+str(w)+"x"+str(h)+"/"+str(i)
     # dir_path="./ExtendedYaleB/yaleB"+str(i)
+    is_not_saw=True
     if os.path.isdir(dir_path):
         n_classes+=1
         classes.extend([i])
@@ -57,13 +58,17 @@ for i in range(40):
                     continue
                 labels.extend([i])
                 file_paths.extend([dir_path+"/"+file_name])
+                # if is_not_saw==True:
+                #     is_not_saw=False
+                #     im = Image.open(dir_path+"/"+file_name)
+                #     im.show()
+                #     pdb.set_trace()
 labels=np.array(labels)
 classes=np.array(classes)
 file_paths=np.array(file_paths)
 for i in range(n_classes):
     lab_to_ind_dir[classes[i]]=i
     ind_to_lab_dir[i]=classes[i]
-
 
 
 
@@ -84,7 +89,7 @@ for i in range(n_classes):
 
 
 
-reg_mul=1
+reg_mul=5
 
 t=time.time()
 
@@ -129,9 +134,9 @@ for i in index_l:
         pdb.set_trace()
     Y_labelled[:,ind]=im_vec
     ind+=1
-Y_train = Y_labelled
-Y_train = preprocessing.normalize(Y_train.T, norm='l2').T*reg_mul
-# Y_train = preprocessing.normalize(Y_train.T, norm='l2').T
+Y_init = Y_labelled
+Y_init = preprocessing.normalize(Y_init.T, norm='l2').T*reg_mul
+# Y_init = preprocessing.normalize(Y_init.T, norm='l2').T
 n_atoms = start_init_number
 n_neighbor = 8
 lamda = 0.5
@@ -146,7 +151,7 @@ n_iter_sp = 50 #number max of iteration in sparse coding
 n_iter_du = 50 # number max of iteration in dictionary update
 n_iter = 15 # number max of general iteration
 
-n_features = Y_train.shape[0]
+n_features = Y_init.shape[0]
 
 
 
@@ -156,23 +161,62 @@ n_features = Y_train.shape[0]
 Ds=np.empty((n_classes,im_vec_len,n_atoms))
 Ws=np.empty((n_classes,n_classes,start_init_number))
 As=np.empty((n_classes,n_atoms*n_classes,start_init_number))
-Bs=np.empty((n_classes,im_vec_len,start_init_number))
-H_Bs=np.empty((n_classes,n_classes,start_init_number))
-Q_Bs=np.empty((n_classes,n_atoms*n_classes,start_init_number))
-Cs=np.empty((n_classes,start_init_number,start_init_number))
+Bs=np.empty((im_vec_len,start_init_number*n_classes))
+H_Bs=np.empty((n_classes,start_init_number*n_classes))
+Q_Bs=np.empty((n_atoms*n_classes,start_init_number*n_classes))
+Cs=np.empty((start_init_number,start_init_number*n_classes))
 for i in range(n_classes):
-    D = initialize_single_D(Y_train, n_atoms, y_labelled,n_labelled,D_index=i)
-    D = norm_cols_plus_petit_1(D,c)
+    D = initialize_single_D(Y_init, n_atoms, y_labelled,n_labelled,D_index=i)
+    # D = norm_cols_plus_petit_1(D,c)
     Ds[i]=D
 D_init=np.copy(Ds[0])
    
 
 print("initializing classifier ... done")
 start_t=time.time()
+
+D_all=Ds
+D_all=D_all.transpose((0,2,1))
+D_all=D_all.reshape(-1,im_vec_len).T
+D_all=preprocessing.normalize(D_all.T, norm='l2').T
+W_all=Ws
+W_all=W_all.transpose((0,2,1))
+W_all=W_all.reshape(-1,n_classes).T
+A_all=As
+A_all=A_all.transpose((0,2,1))
+A_all=A_all.reshape(-1,n_classes*n_atoms).T
+
+def normalize_DB():
+    global D_all
+    global W_all
+    global A_all
+    DB_all=np.vstack((D_all,W_all,A_all))
+    DB_all=preprocessing.normalize(DB_all.T, norm='l2').T
+    D_all=DB_all[:D_all.shape[0],:]
+    W_all=DB_all[D_all.shape[0]:D_all.shape[0]+W_all.shape[0],:]
+    A_all=DB_all[D_all.shape[0]+W_all.shape[0]:,:]
+
 # caled_number=np.zeros(n_classes,dtype=int)
 # for i in range(n_classes):
 #     caled_number[i]=start_init_number
 for i in range(update_times):
+    if i==0:
+        coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm='omp')
+        the_H=np.zeros((n_classes,Y_init.shape[1]),dtype=int)
+        the_Q=np.zeros((n_atoms*n_classes,Y_init.shape[1]),dtype=int)
+        for k in range(Y_init.shape[1]):
+            label=y_labelled[k]
+            lab_index=lab_to_ind_dir[label]
+            the_H[lab_index,k]=1
+            the_Q[n_atoms*lab_index:n_atoms*(lab_index+1),k]=1
+        X_single =(coder.transform(Y_init.T)).T #X_single的每个列向量是一个图像的稀疏表征
+        Bs=np.dot(Y_init,X_single.T)
+        H_Bs=np.dot(the_H,X_single.T)
+        Q_Bs=np.dot(the_Q,X_single.T)
+        Cs=np.linalg.inv(np.dot(X_single,X_single.T))
+        W_all=np.dot(H_Bs,Cs)
+        A_all=np.dot(Q_Bs,Cs)
+        normalize_DB()
     for j in range(n_classes):
         j_label=ind_to_lab_dir[j]
         if j==0 and i%10==0:
@@ -180,29 +224,11 @@ for i in range(update_times):
             sys.stdout.flush()
         # start=(start_init_number+i)*j
         # end=start+(start_init_number+i)
-        D=Ds[j]
-        coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='omp')
-        if i==0:
-            the_H=np.zeros((n_classes,Y_train.shape[1]),dtype=int)
-            the_Q=np.zeros((n_atoms*n_classes,Y_train.shape[1]),dtype=int)
-            for k in range(Y_train.shape[1]):
-                label=y_labelled[k]
-                lab_index=lab_to_ind_dir[label]
-                the_H[lab_index,k]=1
-                the_Q[n_atoms*lab_index:n_atoms*(lab_index+1),k]=1
-            X_single =(coder.transform(Y_train.T[start_init_number*j:start_init_number*j+start_init_number])).T #X_single的每个列向量是一个图像的稀疏表征
-            Bs[j]=np.dot(Y_train[:,start_init_number*j:start_init_number*j+start_init_number],X_single.T)
-            H_Bs[j]=np.dot(the_H[:,start_init_number*j:start_init_number*j+start_init_number],X_single.T)#10,200
-            Q_Bs[j]=np.dot(the_Q[:,start_init_number*j:start_init_number*j+start_init_number],X_single.T)#2000,200
-            Cs[j]=np.linalg.inv(np.dot(X_single,X_single.T))
-            Ws[j]=np.dot(H_Bs[j],Cs[j])
-            As[j]=np.dot(Q_Bs[j],Cs[j])
-        # if j!=0:
-        #     continue
-        the_B=Bs[j]
-        the_H_B=H_Bs[j]
-        the_Q_B=Q_Bs[j]
-        the_C=Cs[j]
+        coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm='omp')
+        the_B=Bs
+        the_H_B=H_Bs
+        the_Q_B=Q_Bs
+        the_C=Cs
         label_indexs_for_update=np.array(np.where(labels==j_label))[0][:train_number]
         new_index=[label_indexs_for_update[(i+start_init_number)%32]]
         im_vec=load_img(file_paths[new_index][0])
@@ -222,31 +248,32 @@ for i in range(update_times):
         new_H_B=the_H_B+np.dot(new_h,new_x.T)
         new_Q_B=the_Q_B+np.dot(new_q,new_x.T)
         new_C=the_C-(np.matrix(the_C)*np.matrix(new_x)*np.matrix(new_x.T)*np.matrix(the_C))/(np.matrix(new_x.T)*np.matrix(the_C)*np.matrix(new_x)+1) #matrix inversion lemma(Woodbury matrix identity)
-        Bs[j]=new_B
-        H_Bs[j]=new_H_B
-        Q_Bs[j]=new_Q_B
-        Cs[j]=new_C
+        Bs=new_B
+        H_Bs=new_H_B
+        Q_Bs=new_Q_B
+        Cs=new_C
         new_D=np.dot(new_B,new_C)
-        D=np.copy(new_D)
-        Ds[j]=D
-        Ws[j]=np.dot(new_H_B,new_C)
-        As[j]=np.dot(new_Q_B,new_C)
-        # Y_train=np.hstack((Y_train[:,0:end],new_y,Y_train[:,end:]))
+        D_all=new_D
+        # Ds[j]=D
+        W_all=np.dot(new_H_B,new_C)
+        A_all=np.dot(new_Q_B,new_C)
+        # Y_init=np.hstack((Y_init[:,0:end],new_y,Y_init[:,end:]))
+        normalize_DB()
 end_t=time.time()
 print("train_time : "+str(end_t-start_t))
-D_all=Ds
-D_all=D_all.transpose((0,2,1))
-D_all=D_all.reshape(-1,im_vec_len).T
+# D_all=Ds
+# D_all=D_all.transpose((0,2,1))
+# D_all=D_all.reshape(-1,im_vec_len).T
 np.save('D_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times),D_all)
 print("D_all saved")
-W_all=Ws
-W_all=W_all.transpose((0,2,1))
-W_all=W_all.reshape(-1,n_classes).T
+# W_all=Ws
+# W_all=W_all.transpose((0,2,1))
+# W_all=W_all.reshape(-1,n_classes).T
 np.save('W_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times),W_all)
 print("W_all saved")
-A_all=As
-A_all=A_all.transpose((0,2,1))
-A_all=A_all.reshape(-1,n_classes*n_atoms).T
+# A_all=As
+# A_all=A_all.transpose((0,2,1))
+# A_all=A_all.reshape(-1,n_classes*n_atoms).T
 np.save('A_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times),A_all)
 print("A_all saved")
 

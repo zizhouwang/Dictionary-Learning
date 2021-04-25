@@ -38,8 +38,8 @@ labels=list([])
 file_paths=list([])
 lab_to_ind_dir={}
 ind_to_lab_dir={}
-w=300
-h=300
+w=192
+h=168
 for i in range(40):
     dir_path="./ExtendedYaleB_"+str(w)+"x"+str(h)+"/"+str(i)
     if os.path.isdir(dir_path):
@@ -58,7 +58,7 @@ for i in range(n_classes):
     lab_to_ind_dir[classes[i]]=i
     ind_to_lab_dir[i]=classes[i]
 
-reg_mul=1
+reg_mul=5
 
 t=time.time()
 
@@ -103,7 +103,6 @@ for cla in classes:
     indexs=np.array(np.where(labels==cla))[0]
     label_index=lab_to_ind_dir[cla]
     indexs=indexs[start_test_number:start_test_number+test_number]
-    np.random.shuffle(indexs)
     Y_test=np.zeros((im_vec_len,test_number))
     ind=0
     temp_process=0
@@ -122,7 +121,7 @@ for cla in classes:
         ind+=1
     Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*reg_mul
     # Y_test = preprocessing.normalize(Y_test.T, norm='l2').T
-    coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='omp')
+    coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm='omp')
     X_test=(coder.transform(Y_test.T)).T
     the_H=np.dot(W_all,X_test)
     right_num=0.
