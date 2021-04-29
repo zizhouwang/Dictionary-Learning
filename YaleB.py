@@ -46,7 +46,7 @@ ind_to_lab_dir={}
 w=192
 h=168
 for i in range(40):
-    dir_path="./ExtendedYaleB_"+str(w)+"x"+str(h)+"/"+str(i)
+    dir_path="./ExtendedYaleB_"+"300"+"x"+"300"+"_to_"+str(w)+"x"+str(h)+"/"+str(i)
     # dir_path="./ExtendedYaleB/yaleB"+str(i)
     if os.path.isdir(dir_path):
         n_classes+=1
@@ -181,7 +181,8 @@ for i in range(update_times):
         # start=(start_init_number+i)*j
         # end=start+(start_init_number+i)
         D=Ds[j]
-        coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='omp')
+        # coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='omp')
+        coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=15, transform_algorithm='omp')
         if i==0:
             the_H=np.zeros((n_classes,Y_train.shape[1]),dtype=int)
             the_Q=np.zeros((n_atoms*n_classes,Y_train.shape[1]),dtype=int)
@@ -237,17 +238,17 @@ print("train_time : "+str(end_t-start_t))
 D_all=Ds
 D_all=D_all.transpose((0,2,1))
 D_all=D_all.reshape(-1,im_vec_len).T
-np.save('D_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times),D_all)
+np.save('D_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times),D_all)
 print("D_all saved")
 W_all=Ws
 W_all=W_all.transpose((0,2,1))
 W_all=W_all.reshape(-1,n_classes).T
-np.save('W_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times),W_all)
+np.save('W_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times),W_all)
 print("W_all saved")
 A_all=As
 A_all=A_all.transpose((0,2,1))
 A_all=A_all.reshape(-1,n_classes*n_atoms).T
-np.save('A_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times),A_all)
+np.save('A_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times),A_all)
 print("A_all saved")
 
     # D_all=np.zeros((data.shape[1],0))

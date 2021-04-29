@@ -20,6 +20,7 @@ import time
 from mnist import MNIST
 from PIL import Image
 import os
+import cv2
 
 def create_dir_if_not_exist(path):
     if not os.path.exists(path):
@@ -46,8 +47,9 @@ ind_to_lab_dir={}
 w=192
 h=168
 for i in range(40):
-    dir_path="./ExtendedYaleB_"+str(w)+"x"+str(h)+"/"+str(i)
-    # dir_path="./ExtendedYaleB/yaleB"+str(i)
+    # dir_path="./ExtendedYaleB_"+str(w)+"x"+str(h)+"/"+str(i)
+    dir_path="./ExtendedYaleB_"+"300"+"x"+"300"+"_to_"+str(w)+"x"+str(h)+"/"+str(i)
+    # dir_path="./ExtendedYaleB_"+"300"+"x"+"300"+"/"+str(i)
     is_not_saw=True
     if os.path.isdir(dir_path):
         n_classes+=1
@@ -72,16 +74,18 @@ for i in range(n_classes):
 
 
 
+
 # ind=0
 # for path in file_paths:
-#     im=Image.open(path)
+#     im = Image.open(path)
+#     im = cv2.cvtColor(np.asarray(im),cv2.IMREAD_GRAYSCALE)
+#     # im = cv2.imread(path,cv2.IMREAD_GRAYSCALE)
 #     label=labels[ind]
-#     create_dir_if_not_exist("./ExtendedYaleB_"+str(w)+"x"+str(h))
-#     create_dir_if_not_exist("./ExtendedYaleB_"+str(w)+"x"+str(h)+"/"+str(label))
-#     x=(640-w)/2
-#     y=(480-h)/2
-#     im_small=im.crop((x,y,x+w,y+h))
-#     im_small.save("./ExtendedYaleB_"+str(w)+"x"+str(h)+"/"+str(label)+path[23:])
+#     create_dir_if_not_exist("./ExtendedYaleB_"+"300"+"x"+"300"+"_to_"+str(w)+"x"+str(h))
+#     create_dir_if_not_exist("./ExtendedYaleB_"+"300"+"x"+"300"+"_to_"+str(w)+"x"+str(h)+"/"+str(label))
+#     im_small=cv2.resize(im,(w,h),interpolation=cv2.INTER_LINEAR)
+#     im_small=Image.fromarray(cv2.cvtColor(im_small,cv2.COLOR_RGB2GRAY))
+#     im_small.save("./ExtendedYaleB_"+"300"+"x"+"300"+"_to_"+str(w)+"x"+str(h)+"/"+str(label)+path[26:])
 #     ind+=1
 # pdb.set_trace()
 
@@ -89,7 +93,7 @@ for i in range(n_classes):
 
 
 
-reg_mul=5
+reg_mul=1
 
 t=time.time()
 
@@ -244,6 +248,7 @@ for i in range(update_times):
         new_q=np.zeros((n_atoms*n_classes,1))
         new_q[n_atoms*lab_index:n_atoms*(lab_index+1),0]=1
         new_x=(coder.transform(new_y.T)).T
+        pdb.set_trace()
         new_B=the_B+np.dot(new_y,new_x.T)
         new_H_B=the_H_B+np.dot(new_h,new_x.T)
         new_Q_B=the_Q_B+np.dot(new_q,new_x.T)

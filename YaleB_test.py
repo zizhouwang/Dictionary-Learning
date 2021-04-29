@@ -38,10 +38,10 @@ labels=list([])
 file_paths=list([])
 lab_to_ind_dir={}
 ind_to_lab_dir={}
-w=300
-h=300
+w=192
+h=168
 for i in range(40):
-    dir_path="./ExtendedYaleB_"+str(w)+"x"+str(h)+"/"+str(i)
+    dir_path="./ExtendedYaleB_"+"300"+"x"+"300"+"_to_"+str(w)+"x"+str(h)+"/"+str(i)
     if os.path.isdir(dir_path):
         n_classes+=1
         classes.extend([i])
@@ -93,8 +93,8 @@ n_iter_sp = 50 #number max of iteration in sparse coding
 n_iter_du = 50 # number max of iteration in dictionary update
 n_iter = 15 # number max of general iteration
 
-D_all=np.load('D_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times)+'.npy')
-W_all=np.load('W_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times)+'.npy')
+D_all=np.load('D_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times)+'.npy')
+W_all=np.load('W_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times)+'.npy')
 # D_all=np.load('D_all_YaleB_init'+'.npy')
 # W_all=np.load('W_all_YaleB_init'+'.npy')
 # A_all=np.load('A_all_YaleB_'+str(update_times))
@@ -122,7 +122,8 @@ for cla in classes:
         ind+=1
     Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*reg_mul
     # Y_test = preprocessing.normalize(Y_test.T, norm='l2').T
-    coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='omp')
+    # coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='omp')
+    coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm='omp')
     X_test=(coder.transform(Y_test.T)).T
     the_H=np.dot(W_all,X_test)
     right_num=0.
@@ -131,6 +132,20 @@ for cla in classes:
         pre=the_H[:,i].argmax()
         if pre==label_index:
             right_num+=1.
+        else:
+            print("start")
+            # pre=-1
+            # max_energy=-1
+            for j in range(n_classes):
+                X_one_test=X_test[:,i][j*15:(j+1)*15]
+                W_one=W_all[:,j*15:(j+1)*15]
+                print(np.dot(W_one,X_one_test))
+                pre_one=np.dot(W_one,X_one_test).argmax()
+                pre_energy=np.dot(W_one,X_one_test)[pre_one]
+                print(np.dot(W_one,X_one_test)[pre_one])
+                print(np.dot(W_one,X_one_test).argmax())
+                print()
+                pdb.set_trace()
     print('label : '+str(cla))
     print('accuracy : '+str(right_num/test_number))
     average_accuracy+=right_num/test_number

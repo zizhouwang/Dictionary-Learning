@@ -41,7 +41,7 @@ ind_to_lab_dir={}
 w=192
 h=168
 for i in range(40):
-    dir_path="./ExtendedYaleB_"+str(w)+"x"+str(h)+"/"+str(i)
+    dir_path="./ExtendedYaleB_"+"300"+"x"+"300"+"_to_"+str(w)+"x"+str(h)+"/"+str(i)
     if os.path.isdir(dir_path):
         n_classes+=1
         classes.extend([i])
@@ -58,7 +58,7 @@ for i in range(n_classes):
     lab_to_ind_dir[classes[i]]=i
     ind_to_lab_dir[i]=classes[i]
 
-reg_mul=5
+reg_mul=1
 
 t=time.time()
 
@@ -130,10 +130,24 @@ for cla in classes:
         pre=the_H[:,i].argmax()
         if pre==label_index:
             right_num+=1.
+        else:
+            print("start")
+            # pre=-1
+            # max_energy=-1
+            for j in range(n_classes):
+                X_one_test=X_test[:,i][j*15:(j+1)*15]
+                W_one=W_all[:,j*15:(j+1)*15]
+                pre_one=np.dot(W_one,X_one_test).argmax()
+                pre_energy=np.dot(W_one,X_one_test)[pre_one]
+                print(np.dot(W_one,X_one_test)[pre_one])
+                print(np.dot(W_one,X_one_test).argmax())
+                print()
+            pdb.set_trace()
     print('label : '+str(cla))
     print('accuracy : '+str(right_num/test_number))
     average_accuracy+=right_num/test_number
     sys.stdout.flush()
+    # pdb.set_trace()
 
 average_accuracy=average_accuracy/n_classes
 print('average_accuracy : '+str(average_accuracy))
