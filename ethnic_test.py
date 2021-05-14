@@ -20,6 +20,7 @@ import time
 from mnist import MNIST
 from PIL import Image
 import os
+import argparse
 
 def load_img(path):
     im = Image.open(path)    # 读取文件
@@ -32,31 +33,65 @@ def write_to_file(path,obj):
         w.truncate()
         w.write(json.dumps(obj.tolist()))
 
-n_classes=0
-classes=list([])
-labels=list([])
-file_paths=list([])
-lab_to_ind_dir={}
-ind_to_lab_dir={}
-w=192
-h=168
-for i in range(40):
-    dir_path="./ExtendedYaleB_"+"300"+"x"+"300"+"_to_"+str(w)+"x"+str(h)+"/"+str(i)
-    if os.path.isdir(dir_path):
-        n_classes+=1
-        classes.extend([i])
-        for root, dirs, files in os.walk(dir_path, topdown=False):
-            for file_name in files:
-                if ".info" in file_name or "Ambient" in file_name:
-                    continue
-                labels.extend([i])
-                file_paths.extend([dir_path+"/"+file_name])
-labels=np.array(labels)
-classes=np.array(classes)
-file_paths=np.array(file_paths)
-for i in range(n_classes):
-    lab_to_ind_dir[classes[i]]=i
-    ind_to_lab_dir[i]=classes[i]
+def pre(Y_test,coder,label_index=-1):
+    global is_one_test
+    global reg_mul
+    Y_test=preprocessing.normalize(Y_test.T, norm='l2').T*reg_mul
+    X_test=(coder.transform(Y_test.T)).T
+    the_H=np.dot(W_all,X_test)
+    right_num=0.
+    file_paths=list([])
+    if is_one_test==True:
+        pre=the_H[:,0].argmax()
+        dir_path="./"+py_file_name+"_"+str(w)+"x"+str(h)
+        dir_path_of_class=dir_path+"/"+str(pre)
+        if os.path.isdir(dir_path_of_class):
+            for root, dirs, files in os.walk(dir_path_of_class, topdown=False):
+                for file_name in files:
+                    if ".info" in file_name or "Ambient" in file_name:
+                        continue
+                    file_paths.extend([dir_path_of_class+"/"+file_name])
+        file_paths=np.array(file_paths)
+        fea_simis=list([])
+        simi_to_im={}
+        for path in file_paths:
+            im = Image.open(path)    # 读取文件
+            im_vec=np.asarray(im,dtype=float).T.reshape(-1,1)
+            im_vec=preprocessing.normalize(im_vec.T, norm='l2').T*reg_mul
+            im_fea=(coder.transform(im_vec.T)).T
+            fea_diff=abs(im_fea-X_test).sum()
+            simi_to_im[fea_diff]=im
+            fea_simis.extend([fea_diff])
+        fea_simis.sort()
+        temp_process=0
+        for simi in fea_simis:
+            simi_im=simi_to_im[simi]
+            simi_im.show()
+            temp_process+=1
+            if temp_process>=5:
+                break
+        pdb.set_trace()
+    else:
+        for i in range(Y_test.shape[1]):
+            pre=the_H[:,i].argmax()
+            if pre==label_index:
+                right_num+=1.
+            else:
+                pass
+                # print("start")
+                # for j in range(n_classes):
+                #     X_one_test=X_test[:,i][j*15:(j+1)*15]
+                #     W_one=W_all[:,j*15:(j+1)*15]
+                #     print(np.dot(W_one,X_one_test))
+                #     pre_one=np.dot(W_one,X_one_test).argmax()
+                #     pre_energy=np.dot(W_one,X_one_test)[pre_one]
+                #     print(np.dot(W_one,X_one_test)[pre_one])
+                #     print(np.dot(W_one,X_one_test).argmax())
+                #     print()
+                #     pdb.set_trace()
+    return right_num
+
+py_file_name="ethnic"
 
 reg_mul=1
 
@@ -64,14 +99,11 @@ t=time.time()
 
 np.random.seed(int(t)%100)
 
-data_count=labels.shape[0]
-
-start_init_number=15
-train_number=32
-update_times=100
-start_test_number=train_number
-test_number=32
-im_vec_len=w*h
+start_init_number=30
+train_number=300
+update_times=300
+start_test_number=start_init_number+train_number
+test_number=200
 
 """ Parameters in optimization  """
 n_atoms = 200
@@ -93,18 +125,69 @@ n_iter_sp = 50 #number max of iteration in sparse coding
 n_iter_du = 50 # number max of iteration in dictionary update
 n_iter = 15 # number max of general iteration
 
-D_all=np.load('D_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times)+'.npy')
-W_all=np.load('W_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times)+'.npy')
-# D_all=np.load('D_all_YaleB_init'+'.npy')
-# W_all=np.load('W_all_YaleB_init'+'.npy')
-# A_all=np.load('A_all_YaleB_'+str(update_times))
+n_classes=0
+classes=list([])
+labels=list([])
+file_paths=list([])
+lab_to_ind_dir={0:0,1:1,2:2,3:3,4:4,5:5,6:6}
+ind_to_lab_dir={0:0,1:1,2:2,3:3,4:4,5:5,6:6}
+w=160
+h=160
+im_vec_len=w*h*3
+dir_path="./"+py_file_name+"_"+str(w)+"x"+str(h)+"_test"
+
+D_all=np.load("D_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+"_"+str(update_times)+".npy")
+W_all=np.load("W_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+"_"+str(update_times)+".npy")
+coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='omp')
+
+is_one_test=True
+parser = argparse.ArgumentParser(description='ArgUtils')
+parser.add_argument('-pfp', type=str, default='no', help="the file path for pre")
+args = parser.parse_args()
+if args.pfp=="no":
+    is_one_test=False
+if is_one_test==True:
+    Y_test=load_img(args.pfp)/255.
+    pre(Y_test,coder)
+    sys.exit()
+
+train_number_of_every_cla=list([])
+for i in range(40):
+    dir_path_of_class=dir_path+"/"+str(i)
+    if os.path.isdir(dir_path_of_class):
+        num_of_cla=0
+        n_classes+=1
+        classes.extend([i])
+        for root, dirs, files in os.walk(dir_path_of_class, topdown=False):
+            for file_name in files:
+                if ".info" in file_name or "Ambient" in file_name:
+                    continue
+                num_of_cla+=1
+                labels.extend([i])
+                file_paths.extend([dir_path_of_class+"/"+file_name])
+labels=np.array(labels)
+classes=np.array(classes)
+file_paths=np.array(file_paths)
+
 average_accuracy=0.
+true_test_number=test_number
+true_start_test_number=start_test_number
 for cla in classes:
     indexs=np.array(np.where(labels==cla))[0]
+    acl_test_number=indexs.shape[0]
+    if acl_test_number<start_test_number+test_number:
+        true_test_number=acl_test_number
+        true_start_test_number=0
+    else:
+        true_test_number=test_number
+        true_start_test_number=start_test_number
     label_index=lab_to_ind_dir[cla]
-    indexs=indexs[start_test_number:start_test_number+test_number]
+    indexs=indexs[true_start_test_number:true_start_test_number+true_test_number]
+    if indexs.shape[0]==0:
+        continue
     np.random.shuffle(indexs)
-    Y_test=np.zeros((im_vec_len,test_number))
+    Y_test=np.zeros((im_vec_len,true_test_number))
+    pdb.set_trace()
     ind=0
     temp_process=0
     for i in indexs:
@@ -120,35 +203,38 @@ for cla in classes:
             pdb.set_trace()
         Y_test[:,ind]=im_vec
         ind+=1
-    Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*reg_mul
     # Y_test = preprocessing.normalize(Y_test.T, norm='l2').T
-    # coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='omp')
-    coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm='omp')
-    X_test=(coder.transform(Y_test.T)).T
-    the_H=np.dot(W_all,X_test)
-    right_num=0.
-    for i in range(test_number):
-        # pdb.set_trace()
-        pre=the_H[:,i].argmax()
-        if pre==label_index:
-            right_num+=1.
-        else:
-            print("start")
-            # pre=-1
-            # max_energy=-1
-            for j in range(n_classes):
-                X_one_test=X_test[:,i][j*15:(j+1)*15]
-                W_one=W_all[:,j*15:(j+1)*15]
-                print(np.dot(W_one,X_one_test))
-                pre_one=np.dot(W_one,X_one_test).argmax()
-                pre_energy=np.dot(W_one,X_one_test)[pre_one]
-                print(np.dot(W_one,X_one_test)[pre_one])
-                print(np.dot(W_one,X_one_test).argmax())
-                print()
-                pdb.set_trace()
+    # coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm='omp')
+    right_num=pre(Y_test,coder,label_index)
+
+
+    # X_test=(coder.transform(Y_test.T)).T
+    # the_H=np.dot(W_all,X_test)
+    # right_num=0.
+    # for i in range(true_test_number):
+    #     pre=the_H[:,i].argmax()
+    #     if pre==label_index:
+    #         right_num+=1.
+    #     else:
+    #         pass
+    #         # print("start")
+    #         # for j in range(n_classes):
+    #         #     X_one_test=X_test[:,i][j*15:(j+1)*15]
+    #         #     W_one=W_all[:,j*15:(j+1)*15]
+    #         #     print(np.dot(W_one,X_one_test))
+    #         #     pre_one=np.dot(W_one,X_one_test).argmax()
+    #         #     pre_energy=np.dot(W_one,X_one_test)[pre_one]
+    #         #     print(np.dot(W_one,X_one_test)[pre_one])
+    #         #     print(np.dot(W_one,X_one_test).argmax())
+    #         #     print()
+    #         #     pdb.set_trace()
+
+
+
+
     print('label : '+str(cla))
-    print('accuracy : '+str(right_num/test_number))
-    average_accuracy+=right_num/test_number
+    print('accuracy : '+str(right_num/true_test_number))
+    average_accuracy+=right_num/true_test_number
     sys.stdout.flush()
 
 average_accuracy=average_accuracy/n_classes

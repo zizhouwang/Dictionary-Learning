@@ -122,8 +122,8 @@ for cla in classes:
         ind+=1
     Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*reg_mul
     # Y_test = preprocessing.normalize(Y_test.T, norm='l2').T
-    # coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='omp')
-    coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm='omp')
+    coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='omp')
+    # coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm='omp')
     X_test=(coder.transform(Y_test.T)).T
     the_H=np.dot(W_all,X_test)
     right_num=0.
@@ -133,19 +133,18 @@ for cla in classes:
         if pre==label_index:
             right_num+=1.
         else:
-            print("start")
-            # pre=-1
-            # max_energy=-1
-            for j in range(n_classes):
-                X_one_test=X_test[:,i][j*15:(j+1)*15]
-                W_one=W_all[:,j*15:(j+1)*15]
-                print(np.dot(W_one,X_one_test))
-                pre_one=np.dot(W_one,X_one_test).argmax()
-                pre_energy=np.dot(W_one,X_one_test)[pre_one]
-                print(np.dot(W_one,X_one_test)[pre_one])
-                print(np.dot(W_one,X_one_test).argmax())
-                print()
-                pdb.set_trace()
+            pass
+            # print("start")
+            # for j in range(n_classes):
+            #     X_one_test=X_test[:,i][j*15:(j+1)*15]
+            #     W_one=W_all[:,j*15:(j+1)*15]
+            #     print(np.dot(W_one,X_one_test))
+            #     pre_one=np.dot(W_one,X_one_test).argmax()
+            #     pre_energy=np.dot(W_one,X_one_test)[pre_one]
+            #     print(np.dot(W_one,X_one_test)[pre_one])
+            #     print(np.dot(W_one,X_one_test).argmax())
+            #     print()
+            #     pdb.set_trace()
     print('label : '+str(cla))
     print('accuracy : '+str(right_num/test_number))
     average_accuracy+=right_num/test_number

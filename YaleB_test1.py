@@ -131,18 +131,17 @@ for cla in classes:
         if pre==label_index:
             right_num+=1.
         else:
-            print("start")
-            # pre=-1
-            # max_energy=-1
-            for j in range(n_classes):
-                X_one_test=X_test[:,i][j*15:(j+1)*15]
-                W_one=W_all[:,j*15:(j+1)*15]
-                pre_one=np.dot(W_one,X_one_test).argmax()
-                pre_energy=np.dot(W_one,X_one_test)[pre_one]
-                print(np.dot(W_one,X_one_test)[pre_one])
-                print(np.dot(W_one,X_one_test).argmax())
-                print()
-            pdb.set_trace()
+            pass
+            # print("start")
+            # for j in range(n_classes):
+            #     X_one_test=X_test[:,i][j*15:(j+1)*15]
+            #     W_one=W_all[:,j*15:(j+1)*15]
+            #     pre_one=np.dot(W_one,X_one_test).argmax()
+            #     pre_energy=np.dot(W_one,X_one_test)[pre_one]
+            #     print(np.dot(W_one,X_one_test)[pre_one])
+            #     print(np.dot(W_one,X_one_test).argmax())
+            #     print()
+            # pdb.set_trace()
     print('label : '+str(cla))
     print('accuracy : '+str(right_num/test_number))
     average_accuracy+=right_num/test_number

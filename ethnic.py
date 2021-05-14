@@ -22,6 +22,23 @@ from PIL import Image
 import os
 import cv2
 import hashlib
+import cv2
+import numpy as np
+
+def add_noise(im):
+    peppers=cv2.cvtColor(np.asarray(im),cv2.COLOR_RGB2BGR)
+    row, column, deep = peppers.shape
+    noise_salt = np.random.randint(0, 256, (row, column))
+    flag = 0.1
+    noise_salt = np.where(noise_salt < flag * 256, 255, 0)
+    noise_salt=np.stack((noise_salt,noise_salt,noise_salt),axis=2)
+    peppers.astype("float")
+    noise_salt.astype("float")
+    salt = peppers + noise_salt
+    salt = np.where(salt > 255, 255, salt)
+    salt=salt.astype("uint8")
+    image = Image.fromarray(cv2.cvtColor(salt,cv2.COLOR_BGR2RGB)) 
+    return image
 
 def get_image_md5(path):
     file = open(path, "rb")
@@ -40,50 +57,75 @@ def load_img(path):
     return im_vec
 
 def write_to_file(path,obj):
-    with open(path, mode='a+', encoding="utf-8") as w:
+    with open(path, mode="a+", encoding="utf-8") as w:
         w.seek(0)
         w.truncate()
         w.write(json.dumps(obj.tolist()))
+
+def get_test_data(file_paths):
+    ind=0
+    for path in file_paths:
+        im=Image.open(path)
+        im = cv2.cvtColor(np.asarray(im),cv2.IMREAD_COLOR)
+        im=im*0.5
+        im=im.astype(np.uint8)
+        im_small=cv2.resize(im,(w,h),interpolation=cv2.INTER_LINEAR)
+        im_small=add_noise(im_small)
+        label=labels[ind]
+        create_dir_if_not_exist("./"+py_file_name+"_"+str(w)+"x"+str(h)+"_test")
+        create_dir_if_not_exist("./"+py_file_name+"_"+str(w)+"x"+str(h)+"_test"+"/"+str(label))
+        im_md5=get_image_md5(path)
+        # im=Image.fromarray(im)
+        im_small.save("./"+py_file_name+"_"+str(w)+"x"+str(h)+"_test"+"/"+str(label)+"/"+im_md5+".png")
+        ind+=1
+
+py_file_name="ethnic"
 
 n_classes=0
 classes=list([])
 labels=list([])
 file_paths=list([])
-lab_to_ind_dir={"仫佬族":0,"纳西族":1,"怒族":2,"普米族":3,"羌族":4,"撒拉族":5,"畲族":6}
-ind_to_lab_dir={0:"仫佬族",1:"纳西族",2:"怒族",3:"普米族",4:"羌族",5:"撒拉族",6:"畲族"}
+# ind_to_lab_dir={0:"仫佬族",1:"纳西族",2:"怒族",3:"普米族",4:"羌族",5:"撒拉族",6:"畲族"}
+lab_to_ind_dir={0:0,1:1,2:2,3:3,4:4,5:5,6:6}
+ind_to_lab_dir={0:0,1:1,2:2,3:3,4:4,5:5,6:6}
 w=160
 h=160
+train_number_of_every_cla=list([])
 for i in range(8):
-    dir_path="./ethnic_"+str(w)+"x"+str(h)+"/"+str(i)
-    # dir_path="./ethnic/"+str(i)
+    dir_path="./"+py_file_name+"_"+str(w)+"x"+str(h)+"/"+str(i)
+    # dir_path="./"+py_file_name+"_original/"+str(i)
     if os.path.isdir(dir_path):
+        num_of_cla=0
         n_classes+=1
         classes.extend([i])
         for root, dirs, files in os.walk(dir_path, topdown=False):
             for file_name in files:
                 if ".info" in file_name or "Ambient" in file_name:
                     continue
+                num_of_cla+=1
                 labels.extend([i])
                 file_paths.extend([dir_path+"/"+file_name])
+            train_number_of_every_cla.extend([num_of_cla])
 labels=np.array(labels)
 classes=np.array(classes)
 file_paths=np.array(file_paths)
+train_number_of_every_cla=np.array(train_number_of_every_cla)
 
 
 
-
+# get_test_data(file_paths)
 # ind=0
 # for path in file_paths:
 #     im=Image.open(path)
 #     im = cv2.cvtColor(np.asarray(im),cv2.IMREAD_COLOR)
 #     label=labels[ind]
-#     create_dir_if_not_exist("./ethnic_"+str(w)+"x"+str(h))
-#     create_dir_if_not_exist("./ethnic_"+str(w)+"x"+str(h)+"/"+str(label))
+#     create_dir_if_not_exist("./"+py_file_name+"_"+str(w)+"x"+str(h))
+#     create_dir_if_not_exist("./"+py_file_name+"_"+str(w)+"x"+str(h)+"/"+str(label))
 #     im_md5=get_image_md5(path)
 #     im_small=cv2.resize(im,(w,h),interpolation=cv2.INTER_LINEAR)
 #     im_small=Image.fromarray(im_small)
 #     # pdb.set_trace()
-#     im_small.save("./ethnic_"+str(w)+"x"+str(h)+"/"+str(label)+"/"+im_md5+".png")
+#     im_small.save("./"+py_file_name+"_"+str(w)+"x"+str(h)+"/"+str(label)+"/"+im_md5+".png")
 #     ind+=1
 # pdb.set_trace()
 
@@ -99,10 +141,11 @@ np.random.seed(int(t)%100)
 
 data_count=labels.shape[0]
 
-start_init_number=15
-train_number=32
-update_times=100
+start_init_number=30
+train_number=300
+update_times=300
 im_vec_len=w*h*3
+
 
 index = list([])
 for i in classes:
@@ -137,8 +180,7 @@ for i in index_l:
     Y_labelled[:,ind]=im_vec
     ind+=1
 Y_train = Y_labelled
-Y_train = preprocessing.normalize(Y_train.T, norm='l2').T*reg_mul
-# Y_train = preprocessing.normalize(Y_train.T, norm='l2').T
+Y_train = preprocessing.normalize(Y_train.T, norm="l2").T*reg_mul
 n_atoms = start_init_number
 n_neighbor = 8
 lamda = 0.5
@@ -172,7 +214,6 @@ for i in range(n_classes):
     D = norm_cols_plus_petit_1(D,c)
     Ds[i]=D
 D_init=np.copy(Ds[0])
-   
 
 print("initializing classifier ... done")
 start_t=time.time()
@@ -181,7 +222,6 @@ start_t=time.time()
 #     caled_number[i]=start_init_number
 for i in range(update_times):
     for j in range(n_classes):
-        pdb.set_trace()
         j_label=ind_to_lab_dir[j]
         if j==0 and i%10==0:
             print(i)
@@ -189,8 +229,8 @@ for i in range(update_times):
         # start=(start_init_number+i)*j
         # end=start+(start_init_number+i)
         D=Ds[j]
-        # coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='omp')
-        coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=15, transform_algorithm='omp')
+        coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm="omp")
+        # coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=30, transform_algorithm="omp")
         if i==0:
             the_H=np.zeros((n_classes,Y_train.shape[1]),dtype=int)
             the_Q=np.zeros((n_atoms*n_classes,Y_train.shape[1]),dtype=int)
@@ -201,25 +241,39 @@ for i in range(update_times):
                 the_Q[n_atoms*lab_index:n_atoms*(lab_index+1),k]=1
             X_single =(coder.transform(Y_train.T[start_init_number*j:start_init_number*j+start_init_number])).T #X_single的每个列向量是一个图像的稀疏表征
             Bs[j]=np.dot(Y_train[:,start_init_number*j:start_init_number*j+start_init_number],X_single.T)
-            H_Bs[j]=np.dot(the_H[:,start_init_number*j:start_init_number*j+start_init_number],X_single.T)#10,200
-            Q_Bs[j]=np.dot(the_Q[:,start_init_number*j:start_init_number*j+start_init_number],X_single.T)#2000,200
+            H_Bs[j]=np.dot(the_H[:,start_init_number*j:start_init_number*j+start_init_number],X_single.T)
+            Q_Bs[j]=np.dot(the_Q[:,start_init_number*j:start_init_number*j+start_init_number],X_single.T)
             Cs[j]=np.linalg.inv(np.dot(X_single,X_single.T))
             Ws[j]=np.dot(H_Bs[j],Cs[j])
             As[j]=np.dot(Q_Bs[j],Cs[j])
-        # if j!=0:
-        #     continue
+
+            # the_H=np.zeros((n_classes,Y_train.shape[1]),dtype=int)
+            # the_H[:]=0.0
+            # the_Q=np.zeros((n_atoms*n_classes,Y_train.shape[1]),dtype=int)
+            # the_Q[:]=0.0
+            # data_indexs=np.array(np.where(y_labelled==j_label))[0]
+            # the_H[j,data_indexs]=1
+            # the_Q[n_atoms*j:n_atoms*(j+1),data_indexs]=1
+            # X_single =(coder.transform(Y_train.T)).T #X_single的每个列向量是一个图像的稀疏表征
+            # Bs[j]=np.dot(Y_train[:,start_init_number*j:start_init_number*j+start_init_number],X_single.T[start_init_number*j:start_init_number*j+start_init_number])
+            # H_Bs[j]=np.dot(the_H,X_single.T)
+            # Q_Bs[j]=np.dot(the_Q,X_single.T)
+            # Cs[j]=np.linalg.inv(np.dot(X_single,X_single.T))
+            # Ws[j]=np.dot(H_Bs[j],Cs[j])
+            # As[j]=np.dot(Q_Bs[j],Cs[j])
         the_B=Bs[j]
         the_H_B=H_Bs[j]
         the_Q_B=Q_Bs[j]
         the_C=Cs[j]
-        pdb.set_trace()
         label_indexs_for_update=np.array(np.where(labels==j_label))[0][:train_number]
-        new_index=[label_indexs_for_update[(i+start_init_number)%32]]
+        num_of_cla=train_number_of_every_cla[j]
+        if num_of_cla>start_init_number+train_number:
+            num_of_cla=start_init_number+train_number
+        new_index=[label_indexs_for_update[(i+start_init_number)%num_of_cla]]
         im_vec=load_img(file_paths[new_index][0])
         im_vec=im_vec/255.
         new_y=np.array(im_vec,dtype = float)
-        new_y=preprocessing.normalize(new_y.T, norm='l2').T*reg_mul
-        # new_y=preprocessing.normalize(new_y.T, norm='l2').T
+        new_y=preprocessing.normalize(new_y.T, norm="l2").T*reg_mul
         new_y.reshape(n_features,1)
         new_label=labels[new_index][0]
         new_h=np.zeros((n_classes,1))
@@ -247,31 +301,31 @@ print("train_time : "+str(end_t-start_t))
 D_all=Ds
 D_all=D_all.transpose((0,2,1))
 D_all=D_all.reshape(-1,im_vec_len).T
-np.save('D_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times),D_all)
+np.save("D_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+"_"+str(update_times),D_all)
 print("D_all saved")
 W_all=Ws
 W_all=W_all.transpose((0,2,1))
 W_all=W_all.reshape(-1,n_classes).T
-np.save('W_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times),W_all)
+np.save("W_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+"_"+str(update_times),W_all)
 print("W_all saved")
 A_all=As
 A_all=A_all.transpose((0,2,1))
 A_all=A_all.reshape(-1,n_classes*n_atoms).T
-np.save('A_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times),A_all)
+np.save("A_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+"_"+str(update_times),A_all)
 print("A_all saved")
 
     # D_all=np.zeros((data.shape[1],0))
     # for i in range(n_classes):
     #     D_all=np.hstack((D_all,np.copy(Ds[i])))
-    # np.save('D_all_YaleB_'+str(update_times),D_all)
+    # np.save("D_all_YaleB_"+str(update_times),D_all)
     # print("D_all saved")
     # W_all=np.zeros((Ws.shape[1],0))
     # for i in range(n_classes):
     #     W_all=np.hstack((W_all,np.copy(Ws[i])))
-    # np.save('W_all_YaleB_'+str(update_times),W_all)
+    # np.save("W_all_YaleB_"+str(update_times),W_all)
     # print("W_all saved")
     # A_all=np.zeros((As.shape[1],0))
     # for i in range(n_classes):
     #     A_all=np.hstack((A_all,np.copy(As[i])))
-    # np.save('A_all_YaleB_'+str(update_times),A_all)
+    # np.save("A_all_YaleB_"+str(update_times),A_all)
     # print("A_all saved")
