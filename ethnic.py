@@ -29,7 +29,7 @@ def add_noise(im):
     peppers=cv2.cvtColor(np.asarray(im),cv2.COLOR_RGB2BGR)
     row, column, deep = peppers.shape
     noise_salt = np.random.randint(0, 256, (row, column))
-    flag = 0.1
+    flag = 0.2#噪点比例
     noise_salt = np.where(noise_salt < flag * 256, 255, 0)
     noise_salt=np.stack((noise_salt,noise_salt,noise_salt),axis=2)
     peppers.astype("float")
@@ -78,6 +78,7 @@ def get_test_data(file_paths):
         # im=Image.fromarray(im)
         im_small.save("./"+py_file_name+"_"+str(w)+"x"+str(h)+"_test"+"/"+str(label)+"/"+im_md5+".png")
         ind+=1
+    pdb.set_trace()
 
 py_file_name="ethnic"
 
@@ -229,8 +230,8 @@ for i in range(update_times):
         # start=(start_init_number+i)*j
         # end=start+(start_init_number+i)
         D=Ds[j]
-        coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm="omp")
-        # coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=30, transform_algorithm="omp")
+        # coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm="omp")
+        coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=30, transform_algorithm="omp")
         if i==0:
             the_H=np.zeros((n_classes,Y_train.shape[1]),dtype=int)
             the_Q=np.zeros((n_atoms*n_classes,Y_train.shape[1]),dtype=int)

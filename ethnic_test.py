@@ -21,6 +21,9 @@ from mnist import MNIST
 from PIL import Image
 import os
 import argparse
+import cv2
+import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
 
 def load_img(path):
     im = Image.open(path)    # 读取文件
@@ -33,9 +36,14 @@ def write_to_file(path,obj):
         w.truncate()
         w.write(json.dumps(obj.tolist()))
 
-def pre(Y_test,coder,label_index=-1):
+def pre(path,Y_test,coder,label_index=-1):
     global is_one_test
     global reg_mul
+    ind_to_name_dir={0:"mi lao zu",1:"bian fu",2:"hu die",3:"hua",4:"lao hu",5:"long",6:"xiang yun"}
+    if path!=None:
+        im_test = Image.open(path)
+        im_vec=np.asarray(im_test,dtype=float).T.reshape(-1,1)
+        Y_test=im_vec/255.
     Y_test=preprocessing.normalize(Y_test.T, norm='l2').T*reg_mul
     X_test=(coder.transform(Y_test.T)).T
     the_H=np.dot(W_all,X_test)
@@ -43,6 +51,8 @@ def pre(Y_test,coder,label_index=-1):
     file_paths=list([])
     if is_one_test==True:
         pre=the_H[:,0].argmax()
+        print("pre done, start search")
+        sys.stdout.flush()
         dir_path="./"+py_file_name+"_"+str(w)+"x"+str(h)
         dir_path_of_class=dir_path+"/"+str(pre)
         if os.path.isdir(dir_path_of_class):
@@ -64,13 +74,26 @@ def pre(Y_test,coder,label_index=-1):
             fea_simis.extend([fea_diff])
         fea_simis.sort()
         temp_process=0
+        fig=plt.figure()
+        fig.suptitle(ind_to_name_dir[pre])
+        cv_im=cv2.cvtColor(np.asarray(im_test),cv2.IMREAD_COLOR)
+        ax=plt.subplot(2,3,1)
+        ax.imshow(cv_im)
+        plt.axis("off")
+        plt.xticks([])
+        plt.yticks([])
         for simi in fea_simis:
             simi_im=simi_to_im[simi]
-            simi_im.show()
+            cv_im=cv2.cvtColor(np.asarray(simi_im),cv2.IMREAD_COLOR)
+            ax=plt.subplot(2,3,temp_process+2)
+            ax.imshow(cv_im)
+            plt.axis("off")
+            plt.xticks([])
+            plt.yticks([])
             temp_process+=1
             if temp_process>=5:
                 break
-        pdb.set_trace()
+        plt.show()
     else:
         for i in range(Y_test.shape[1]):
             pre=the_H[:,i].argmax()
@@ -138,7 +161,8 @@ dir_path="./"+py_file_name+"_"+str(w)+"x"+str(h)+"_test"
 
 D_all=np.load("D_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+"_"+str(update_times)+".npy")
 W_all=np.load("W_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+"_"+str(update_times)+".npy")
-coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='omp')
+# coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='omp')
+coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm="omp")
 
 is_one_test=True
 parser = argparse.ArgumentParser(description='ArgUtils')
@@ -147,8 +171,7 @@ args = parser.parse_args()
 if args.pfp=="no":
     is_one_test=False
 if is_one_test==True:
-    Y_test=load_img(args.pfp)/255.
-    pre(Y_test,coder)
+    pre(path=args.pfp,Y_test=None,coder=coder)
     sys.exit()
 
 train_number_of_every_cla=list([])
@@ -187,7 +210,6 @@ for cla in classes:
         continue
     np.random.shuffle(indexs)
     Y_test=np.zeros((im_vec_len,true_test_number))
-    pdb.set_trace()
     ind=0
     temp_process=0
     for i in indexs:
@@ -204,8 +226,7 @@ for cla in classes:
         Y_test[:,ind]=im_vec
         ind+=1
     # Y_test = preprocessing.normalize(Y_test.T, norm='l2').T
-    # coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm='omp')
-    right_num=pre(Y_test,coder,label_index)
+    right_num=pre(path=None,Y_test=Y_test,coder=coder,label_index=label_index)
 
 
     # X_test=(coder.transform(Y_test.T)).T
@@ -259,7 +280,6 @@ print('average_accuracy : '+str(average_accuracy))
 #     Y_test[:,ind]=im_vec
 #     ind+=1
 # Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*5
-# coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd')
 # X_test=(coder.transform(Y_test.T)).T
 # the_H=np.dot(W_all,X_test)
 # right_num=0.
