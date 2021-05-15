@@ -2,3 +2,4 @@
 ExtendedYaleB*
 *.npy
 ethnic_*
+__pycache__*
