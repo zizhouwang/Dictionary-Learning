@@ -231,7 +231,7 @@ for i in range(update_times):
         # end=start+(start_init_number+i)
         D=Ds[j]
         # coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm="omp")
-        coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=30, transform_algorithm="omp")
+        coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=15, transform_algorithm="omp")
         if i==0:
             the_H=np.zeros((n_classes,Y_train.shape[1]),dtype=int)
             the_Q=np.zeros((n_atoms*n_classes,Y_train.shape[1]),dtype=int)

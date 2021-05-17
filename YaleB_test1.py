@@ -74,7 +74,7 @@ test_number=32
 im_vec_len=w*h
 
 """ Parameters in optimization  """
-n_atoms = 200
+n_atoms = start_init_number
 n_neighbor = 8
 lamda = 0.5
 beta = 1.

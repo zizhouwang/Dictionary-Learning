@@ -66,9 +66,9 @@ np.random.seed(int(t)%100)
 
 data_count=labels.shape[0]
 
-start_init_number=15
+start_init_number=20
 train_number=32
-update_times=100
+update_times=32
 start_test_number=train_number
 test_number=32
 im_vec_len=w*h
@@ -83,6 +83,7 @@ mu = 2.*gamma
 seed = 0
 r = 2.
 c = 1.
+transform_n_nonzero_coefs=10
 
 n_iter = 15
 n_iter_sp = 50
@@ -93,8 +94,8 @@ n_iter_sp = 50 #number max of iteration in sparse coding
 n_iter_du = 50 # number max of iteration in dictionary update
 n_iter = 15 # number max of general iteration
 
-D_all=np.load('D_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times)+'.npy')
-W_all=np.load('W_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times)+'.npy')
+D_all=np.load('D_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'.npy')
+W_all=np.load('W_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'.npy')
 # D_all=np.load('D_all_YaleB_init'+'.npy')
 # W_all=np.load('W_all_YaleB_init'+'.npy')
 # A_all=np.load('A_all_YaleB_'+str(update_times))
@@ -103,7 +104,7 @@ for cla in classes:
     indexs=np.array(np.where(labels==cla))[0]
     label_index=lab_to_ind_dir[cla]
     indexs=indexs[start_test_number:start_test_number+test_number]
-    np.random.shuffle(indexs)
+    # np.random.shuffle(indexs)
     Y_test=np.zeros((im_vec_len,test_number))
     ind=0
     temp_process=0
@@ -122,17 +123,24 @@ for cla in classes:
         ind+=1
     Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*reg_mul
     # Y_test = preprocessing.normalize(Y_test.T, norm='l2').T
-    coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='omp')
-    # coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm='omp')
-    X_test=(coder.transform(Y_test.T)).T
-    temp_part=X_test[label_index*start_init_number:(label_index+1)*start_init_number]
-    print(abs(temp_part).sum()/start_init_number)
-    print(abs(X_test).sum()/X_test.shape[0])
-    the_H=np.dot(W_all,X_test)
+    pre_label=np.zeros(test_number,dtype=int)
+    pre_H=np.zeros(test_number,dtype=float)
+    for i in range(n_classes):
+        D_part=D_all[:,i*n_atoms:(i+1)*n_atoms]
+        coder = SparseCoder(dictionary=D_part.T,transform_alpha=lamda/2., transform_algorithm='omp')
+        # coder = SparseCoder(dictionary=D_part.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm='omp')
+        X_test=(coder.transform(Y_test.T)).T
+        the_H=np.dot(W_all[:,i*n_atoms:(i+1)*n_atoms],X_test)[i]
+        for j in range(test_number):
+            if pre_H[j]<the_H[j]:
+                pre_label[j]=i
+                pre_H[j]=the_H[j]
+        # pdb.set_trace()
+    # pdb.set_trace()
     right_num=0.
     for i in range(test_number):
         # pdb.set_trace()
-        pre=the_H[:,i].argmax()
+        pre=pre_label[i]
         if pre==label_index:
             right_num+=1.
         else:
