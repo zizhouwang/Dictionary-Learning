@@ -94,7 +94,7 @@ data_count=labels.shape[0]
 
 start_init_number=15
 train_number=32
-update_times=100
+update_times=300
 im_vec_len=w*h
 
 index = list([])
@@ -181,8 +181,8 @@ for i in range(update_times):
         # start=(start_init_number+i)*j
         # end=start+(start_init_number+i)
         D=Ds[j]
-        # coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='omp')
-        coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=15, transform_algorithm='omp')
+        coder = SparseCoder(dictionary=D.T,transform_alpha=lamda/2., transform_algorithm='omp')
+        # coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=15, transform_algorithm='omp')
         if i==0:
             the_H=np.zeros((n_classes,Y_train.shape[1]),dtype=int)
             the_Q=np.zeros((n_atoms*n_classes,Y_train.shape[1]),dtype=int)
@@ -205,7 +205,7 @@ for i in range(update_times):
         the_Q_B=Q_Bs[j]
         the_C=Cs[j]
         label_indexs_for_update=np.array(np.where(labels==j_label))[0][:train_number]
-        new_index=[label_indexs_for_update[(i+start_init_number)%32]]
+        new_index=[label_indexs_for_update[(i+start_init_number)%train_number]]
         im_vec=load_img(file_paths[new_index][0])
         im_vec=im_vec/255.
         new_y=np.array(im_vec,dtype = float)
