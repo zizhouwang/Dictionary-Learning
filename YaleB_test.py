@@ -126,55 +126,76 @@ for cla in classes:
     # coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm='omp')
     X_test=(coder.transform(Y_test.T)).T
 
-
-    variances=np.zeros(D_all.shape[1])
+    # if label_index!=2:
+    #     continue
     for i in range(Y_test.shape[1]):
+        variances=np.zeros(D_all.shape[1])
         Y_one=Y_test[:,i]
-        Y_one_T=Y_one.reshape(1,-1)
+        # Y_one_T=Y_one.reshape(1,-1)
         for j in range(D_all.shape[1]):
-            ratios=Y_one/(D_all[:,j])
+            # ratios=Y_one/(D_all[:,j])
+            ratios=(D_all[:,j])/Y_one
             ratio_list=list([])
+            # for k in range(ratios.shape[0]):
+            #     if np.isnan(ratios[k]) or np.isinf(ratios[k]):
+            #         ratios[k]=-10000000.
+            #     if ratios[k]==0.:
+            #         ratios[k]=-10000000.
+            # pdb.set_trace()
             for k in range(ratios.shape[0]):
                 if np.isnan(ratios[k]) or np.isinf(ratios[k]):
+                    continue
+                if ratios[k]==0.:
                     continue
                 ratio_list.extend([ratios[k]])
             ratios=np.array(ratio_list)
             variances[j]=ratios.var()
-            contri=np.dot(Y_one_T,D_all)[0]
-        for index in range(n_classes):
-            print(str(variances[start_init_number*index:start_init_number*(index+1)].mean()))
-            print(str(contri[start_init_number*index:start_init_number*(index+1)].mean()))
+            # (Y_one/D_all[:,1]).var()
+            # contri=np.dot(Y_one_T,D_all)[0]
+        first_atmo_index=variances.argmin()
+        # print(str(variances[start_init_number*label_index:start_init_number*(label_index+1)].mean()))
+        # vari_min=np.inf
+        # for index in range(n_classes):
+        #     vari=variances[start_init_number*index:start_init_number*(index+1)].mean()
+        #     if vari<vari_min:
+        #         vari_min=vari
+        # print(str(vari_min))
+        if first_atmo_index//start_init_number!=label_index:
+            print(label_index)
+            print(first_atmo_index//start_init_number)
+            print(i)
+            print()
             sys.stdout.flush()
-        pdb.set_trace()
+    pdb.set_trace()
 
-    for i in range(X_test.shape[1]):
-        # is_existed_problem=False
-        # X_sums=list([])
-        X_one=X_test[:,i]
-        # temp_part=X_one[label_index*start_init_number:(label_index+1)*start_init_number]
-        # X_true_sum=abs(temp_part).sum()/temp_part.shape[0]
-        # X_sums.extend([X_true_sum])
-        # for j in range(n_classes):
-        #     if j==label_index:
-        #         continue
-        #     other_temp_part=X_one[j*start_init_number:(j+1)*start_init_number]
-        #     X_other_sum=abs(other_temp_part).sum()/other_temp_part.shape[0]
-        #     X_sums.extend([X_other_sum])
-        #     if X_other_sum>=X_true_sum:
-        #         print(X_other_sum)
-        #         print(X_true_sum)
-        #         is_existed_problem=True
-        # X_sums.sort(reverse=True)
-        # X_sums=np.array(X_sums)
-        # if is_existed_problem==True:
-        #     print(abs(X_one).sum()/420.)
-        #     print(X_sums)
-        #     pass
-        #     pdb.set_trace()
-        Y_one=Y_test[:,i]
-        aa=np.dot(D_all.T,Y_one)
-        bb=aa[label_index*start_init_number:(label_index+1)*start_init_number]
-        pdb.set_trace()
+    # for i in range(X_test.shape[1]):
+    #     # is_existed_problem=False
+    #     # X_sums=list([])
+    #     X_one=X_test[:,i]
+    #     # temp_part=X_one[label_index*start_init_number:(label_index+1)*start_init_number]
+    #     # X_true_sum=abs(temp_part).sum()/temp_part.shape[0]
+    #     # X_sums.extend([X_true_sum])
+    #     # for j in range(n_classes):
+    #     #     if j==label_index:
+    #     #         continue
+    #     #     other_temp_part=X_one[j*start_init_number:(j+1)*start_init_number]
+    #     #     X_other_sum=abs(other_temp_part).sum()/other_temp_part.shape[0]
+    #     #     X_sums.extend([X_other_sum])
+    #     #     if X_other_sum>=X_true_sum:
+    #     #         print(X_other_sum)
+    #     #         print(X_true_sum)
+    #     #         is_existed_problem=True
+    #     # X_sums.sort(reverse=True)
+    #     # X_sums=np.array(X_sums)
+    #     # if is_existed_problem==True:
+    #     #     print(abs(X_one).sum()/420.)
+    #     #     print(X_sums)
+    #     #     pass
+    #     #     pdb.set_trace()
+    #     Y_one=Y_test[:,i]
+    #     aa=np.dot(D_all.T,Y_one)
+    #     bb=aa[label_index*start_init_number:(label_index+1)*start_init_number]
+    #     pdb.set_trace()
 
 
     the_H=np.dot(W_all,X_test)
