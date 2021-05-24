@@ -103,7 +103,7 @@ for cla in classes:
     indexs=np.array(np.where(labels==cla))[0]
     label_index=lab_to_ind_dir[cla]
     indexs=indexs[start_test_number:start_test_number+test_number]
-    Y_test=np.zeros((im_vec_len,test_number))
+    Y_test=np.empty((im_vec_len,test_number))
     ind=0
     temp_process=0
     for i in indexs:
@@ -124,48 +124,51 @@ for cla in classes:
     # Y_test = preprocessing.normalize(Y_test.T, norm='l2').T
     coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='omp')
     # coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm='omp')
-    X_test=(coder.transform(Y_test.T)).T
-
+    start_time=time.time()
+    # X_test=(coder.transform(Y_test.T)).T
+    end_time=time.time()
+    print(f"coder transform time is: {end_time-start_time} s")
     # if label_index!=2:
     #     continue
+    start_time=time.time()
+    # aa=np.dot(Y_test.T,D_all)
+    # bb=1./Y_test
+    # end_time=time.time()
+    # print(f"cal var time is: {end_time-start_time} s")
+    # pdb.set_trace()
     for i in range(Y_test.shape[1]):
-        variances=np.zeros(D_all.shape[1])
+        pass
+        D_used=np.empty(D_all.shape[1])
+        D_used[:]=-1
         Y_one=Y_test[:,i]
-        # Y_one_T=Y_one.reshape(1,-1)
+        residual=Y_one
         for j in range(D_all.shape[1]):
-            # ratios=Y_one/(D_all[:,j])
-            ratios=(D_all[:,j])/Y_one
-            ratio_list=list([])
-            # for k in range(ratios.shape[0]):
-            #     if np.isnan(ratios[k]) or np.isinf(ratios[k]):
-            #         ratios[k]=-10000000.
-            #     if ratios[k]==0.:
-            #         ratios[k]=-10000000.
-            # pdb.set_trace()
-            for k in range(ratios.shape[0]):
-                if np.isnan(ratios[k]) or np.isinf(ratios[k]):
+            variances=np.empty(D_all.shape[1])
+            for k in range(D_all.shape[1]):
+                pass
+                if D_used[k]==1:
+                    variances[k]=np.inf
                     continue
-                if ratios[k]==0.:
-                    continue
-                ratio_list.extend([ratios[k]])
-            ratios=np.array(ratio_list)
-            variances[j]=ratios.var()
-            # (Y_one/D_all[:,1]).var()
-            # contri=np.dot(Y_one_T,D_all)[0]
-        first_atmo_index=variances.argmin()
-        # print(str(variances[start_init_number*label_index:start_init_number*(label_index+1)].mean()))
-        # vari_min=np.inf
-        # for index in range(n_classes):
-        #     vari=variances[start_init_number*index:start_init_number*(index+1)].mean()
-        #     if vari<vari_min:
-        #         vari_min=vari
-        # print(str(vari_min))
-        if first_atmo_index//start_init_number!=label_index:
-            print(label_index)
-            print(first_atmo_index//start_init_number)
-            print(i)
-            print()
-            sys.stdout.flush()
+                ratios=(D_all[:,k])/residual
+                ratios=ratios[ratios!=np.nan]
+                ratios=ratios[ratios!=np.inf]
+                ratios=ratios[ratios!=0.]
+                ratios=ratios/ratios.mean()
+                variances[k]=ratios.var()
+            first_atmo_index=variances.argmin()
+            D_used[first_atmo_index]=1
+            D_part=D_all[:,D_used==1]
+            D_part_pinv=np.linalg.pinv(D_part)
+            X_temp=np.dot(D_part_pinv,residual)
+            residual-=np.dot(D_part,X_temp)
+        # if first_atmo_index//start_init_number!=label_index:
+        #     print(label_index)
+        #     print(first_atmo_index//start_init_number)
+        #     print(i)
+        #     print()
+        #     sys.stdout.flush()
+    end_time=time.time()
+    print(f"cal var time is: {end_time-start_time} s")
     pdb.set_trace()
 
     # for i in range(X_test.shape[1]):
