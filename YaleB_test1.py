@@ -72,6 +72,7 @@ update_times=100
 start_test_number=train_number
 test_number=32
 im_vec_len=w*h
+transform_n_nonzero_coefs=20
 
 """ Parameters in optimization  """
 n_atoms = start_init_number
@@ -93,8 +94,8 @@ n_iter_sp = 50 #number max of iteration in sparse coding
 n_iter_du = 50 # number max of iteration in dictionary update
 n_iter = 15 # number max of general iteration
 
-D_all=np.load('D_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times)+'.npy')
-W_all=np.load('W_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times)+'.npy')
+D_all=np.load('D_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'.npy')
+W_all=np.load('W_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'.npy')
 # D_all=np.load('D_all_YaleB_init'+'.npy')
 # W_all=np.load('W_all_YaleB_init'+'.npy')
 # A_all=np.load('A_all_YaleB_'+str(update_times))
@@ -121,7 +122,7 @@ for cla in classes:
         ind+=1
     Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*reg_mul
     # Y_test = preprocessing.normalize(Y_test.T, norm='l2').T
-    coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm='omp')
+    coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm='omp')
     X_test=(coder.transform(Y_test.T)).T
     the_H=np.dot(W_all,X_test)
     right_num=0.

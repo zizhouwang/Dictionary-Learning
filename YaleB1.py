@@ -105,6 +105,7 @@ start_init_number=15
 train_number=32
 update_times=100
 im_vec_len=w*h
+transform_n_nonzero_coefs=20
 
 index = list([])
 for i in classes:
@@ -140,13 +141,10 @@ for i in index_l:
     ind+=1
 Y_init = Y_labelled
 Y_init = preprocessing.normalize(Y_init.T, norm='l2').T*reg_mul
-# Y_init = preprocessing.normalize(Y_init.T, norm='l2').T
 n_atoms = start_init_number
 n_neighbor = 8
 lamda = 0.5
 beta = 1.
-gamma = 1.
-mu = 2.*gamma
 r = 2.
 c = 1.
 
@@ -190,22 +188,15 @@ A_all=As
 A_all=A_all.transpose((0,2,1))
 A_all=A_all.reshape(-1,n_classes*n_atoms).T
 
-def normalize_DB():
-    global D_all
-    global W_all
-    global A_all
-    DB_all=np.vstack((D_all,W_all,A_all))
-    DB_all=preprocessing.normalize(DB_all.T, norm='l2').T
-    D_all=DB_all[:D_all.shape[0],:]
-    W_all=DB_all[D_all.shape[0]:D_all.shape[0]+W_all.shape[0],:]
-    A_all=DB_all[D_all.shape[0]+W_all.shape[0]:,:]
-
 # caled_number=np.zeros(n_classes,dtype=int)
 # for i in range(n_classes):
 #     caled_number[i]=start_init_number
+lambda_init=0.9985
+the_lambda=lambda_init
+DWA_all=None
 for i in range(update_times):
     if i==0:
-        coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm='omp')
+        coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm='omp')
         the_H=np.zeros((n_classes,Y_init.shape[1]),dtype=int)
         the_Q=np.zeros((n_atoms*n_classes,Y_init.shape[1]),dtype=int)
         for k in range(Y_init.shape[1]):
@@ -220,66 +211,77 @@ for i in range(update_times):
         Cs=np.linalg.inv(np.dot(X_single,X_single.T))
         W_all=np.dot(H_Bs,Cs)
         A_all=np.dot(Q_Bs,Cs)
-        normalize_DB()
+        DWA_all=np.vstack((D_all,W_all,A_all))
     for j in range(n_classes):
         j_label=ind_to_lab_dir[j]
-        if j==0 and i%10==0:
-            print(i)
-            sys.stdout.flush()
-        # start=(start_init_number+i)*j
-        # end=start+(start_init_number+i)
-        coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=30, transform_algorithm='omp')
-        the_B=Bs
-        the_H_B=H_Bs
-        the_Q_B=Q_Bs
-        the_C=Cs
+        # if j==0 and i%10==0:
+        #     print(i)
+        #     sys.stdout.flush()
+        coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm='omp')
         label_indexs_for_update=np.array(np.where(labels==j_label))[0][:train_number]
         new_index=[label_indexs_for_update[(i+start_init_number)%32]]
+        new_label=labels[new_index][0]
+        lab_index=lab_to_ind_dir[new_label]
         im_vec=load_img(file_paths[new_index][0])
+        print(file_paths[new_index][0])
         im_vec=im_vec/255.
         new_y=np.array(im_vec,dtype = float)
         new_y=preprocessing.normalize(new_y.T, norm='l2').T*reg_mul
-        # new_y=preprocessing.normalize(new_y.T, norm='l2').T
         new_y.reshape(n_features,1)
-        new_label=labels[new_index][0]
         new_h=np.zeros((n_classes,1))
-        lab_index=lab_to_ind_dir[new_label]
         new_h[lab_index,0]=1
         new_q=np.zeros((n_atoms*n_classes,1))
         new_q[n_atoms*lab_index:n_atoms*(lab_index+1),0]=1
+        new_yhq=np.vstack((new_y,new_h,new_q))
         new_x=(coder.transform(new_y.T)).T
-        pdb.set_trace()
-        new_B=the_B+np.dot(new_y,new_x.T)
-        new_H_B=the_H_B+np.dot(new_h,new_x.T)
-        new_Q_B=the_Q_B+np.dot(new_q,new_x.T)
-        new_C=the_C-(np.matrix(the_C)*np.matrix(new_x)*np.matrix(new_x.T)*np.matrix(the_C))/(np.matrix(new_x.T)*np.matrix(the_C)*np.matrix(new_x)+1) #matrix inversion lemma(Woodbury matrix identity)
-        Bs=new_B
-        H_Bs=new_H_B
-        Q_Bs=new_Q_B
-        Cs=new_C
-        new_D=np.dot(new_B,new_C)
-        D_all=new_D
-        # Ds[j]=D
-        W_all=np.dot(new_H_B,new_C)
-        A_all=np.dot(new_Q_B,new_C)
-        # Y_init=np.hstack((Y_init[:,0:end],new_y,Y_init[:,end:]))
-        normalize_DB()
+        the_C=Cs
+        the_u=(1/the_lambda)*np.dot(the_C,new_x)
+        gamma=1/(1+np.dot(new_x.T,the_u))
+        the_r=new_yhq-np.dot(DWA_all,new_x)
+        new_C=(1/the_lambda)*the_C-gamma*np.dot(the_u,the_u.T)
+        new_DWA=DWA_all+gamma*np.dot(the_r,the_u.T)
+        DWA_all=new_DWA
+
+        # the_B=Bs
+        # the_H_B=H_Bs
+        # the_Q_B=Q_Bs
+        # new_B=the_B+np.dot(new_y,new_x.T)
+        # new_H_B=the_H_B+np.dot(new_h,new_x.T)
+        # new_Q_B=the_Q_B+np.dot(new_q,new_x.T)
+        # new_C=the_C-(np.matrix(the_C)*np.matrix(new_x)*np.matrix(new_x.T)*np.matrix(the_C))/(np.matrix(new_x.T)*np.matrix(the_C)*np.matrix(new_x)+1)
+        # Bs=new_B
+        # H_Bs=new_H_B
+        # Q_Bs=new_Q_B
+        # Cs=new_C
+        # new_D=np.dot(new_B,new_C)
+        # D_all=new_D
+        # W_all=np.dot(new_H_B,new_C)
+        # A_all=np.dot(new_Q_B,new_C)
+    part_lambda=(1-i/update_times)
+    the_lambda=1-(1-lambda_init)*part_lambda*part_lambda*part_lambda
+    D_all=DWA_all[0:D_all.shape[0],:]
+    W_all=DWA_all[D_all.shape[0]:D_all.shape[0]+W_all.shape[0],:]
+    A_all=DWA_all[D_all.shape[0]+W_all.shape[0]:,:]
+    D_all=preprocessing.normalize(D_all.T, norm='l2').T
+    W_all=preprocessing.normalize(W_all.T, norm='l2').T
+    A_all=preprocessing.normalize(A_all.T, norm='l2').T
+    DWA_all=np.vstack((D_all,W_all,A_all))
 end_t=time.time()
 print("train_time : "+str(end_t-start_t))
 # D_all=Ds
 # D_all=D_all.transpose((0,2,1))
 # D_all=D_all.reshape(-1,im_vec_len).T
-np.save('D_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times),D_all)
+np.save('D_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs),D_all)
 print("D_all saved")
 # W_all=Ws
 # W_all=W_all.transpose((0,2,1))
 # W_all=W_all.reshape(-1,n_classes).T
-np.save('W_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times),W_all)
+np.save('W_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs),W_all)
 print("W_all saved")
 # A_all=As
 # A_all=A_all.transpose((0,2,1))
 # A_all=A_all.reshape(-1,n_classes*n_atoms).T
-np.save('A_all_YaleB_'+str(w)+'_'+str(h)+'_'+str(update_times),A_all)
+np.save('A_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs),A_all)
 print("A_all saved")
 
     # D_all=np.zeros((data.shape[1],0))
