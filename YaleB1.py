@@ -101,11 +101,11 @@ np.random.seed(int(t)%100)
 
 data_count=labels.shape[0]
 
-start_init_number=15
+start_init_number=20
 train_number=32
-update_times=100
+update_times=32
 im_vec_len=w*h
-transform_n_nonzero_coefs=20
+transform_n_nonzero_coefs=30
 
 index = list([])
 for i in classes:
@@ -224,6 +224,7 @@ for i in range(update_times):
         lab_index=lab_to_ind_dir[new_label]
         im_vec=load_img(file_paths[new_index][0])
         print(file_paths[new_index][0])
+        sys.stdout.flush()
         im_vec=im_vec/255.
         new_y=np.array(im_vec,dtype = float)
         new_y=preprocessing.normalize(new_y.T, norm='l2').T*reg_mul
@@ -271,17 +272,17 @@ print("train_time : "+str(end_t-start_t))
 # D_all=Ds
 # D_all=D_all.transpose((0,2,1))
 # D_all=D_all.reshape(-1,im_vec_len).T
-np.save('D_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs),D_all)
+np.save('D_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),D_all)
 print("D_all saved")
 # W_all=Ws
 # W_all=W_all.transpose((0,2,1))
 # W_all=W_all.reshape(-1,n_classes).T
-np.save('W_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs),W_all)
+np.save('W_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),W_all)
 print("W_all saved")
 # A_all=As
 # A_all=A_all.transpose((0,2,1))
 # A_all=A_all.reshape(-1,n_classes*n_atoms).T
-np.save('A_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs),A_all)
+np.save('A_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),A_all)
 print("A_all saved")
 
     # D_all=np.zeros((data.shape[1],0))

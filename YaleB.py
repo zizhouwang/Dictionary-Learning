@@ -20,6 +20,7 @@ import time
 from mnist import MNIST
 from PIL import Image
 import os
+import cv2
 
 def create_dir_if_not_exist(path):
     if not os.path.exists(path):
@@ -71,12 +72,15 @@ for i in range(n_classes):
 # for path in file_paths:
 #     im=Image.open(path)
 #     label=labels[ind]
-#     create_dir_if_not_exist("./ExtendedYaleB_"+str(w)+"x"+str(h))
-#     create_dir_if_not_exist("./ExtendedYaleB_"+str(w)+"x"+str(h)+"/"+str(label))
-#     x=(640-w)/2
-#     y=(480-h)/2
-#     im_small=im.crop((x,y,x+w,y+h))
-#     im_small.save("./ExtendedYaleB_"+str(w)+"x"+str(h)+"/"+str(label)+path[23:])
+#     create_dir_if_not_exist("./ExtendedYaleB_"+"300"+"x"+"300"+"_to_"+str(w)+"x"+str(h))
+#     create_dir_if_not_exist("./ExtendedYaleB_"+"300"+"x"+"300"+"_to_"+str(w)+"x"+str(h)+"/"+str(label))
+#     x=(640-300)/2
+#     y=(480-300)/2
+#     im=im.crop((x,y,x+w,y+h))
+#     im_small = cv2.cvtColor(np.asarray(im),cv2.IMREAD_GRAYSCALE)
+#     im_small=cv2.resize(im_small,(w,h),interpolation=cv2.INTER_LINEAR)
+#     im_small=Image.fromarray(cv2.cvtColor(im_small,cv2.COLOR_RGB2GRAY))
+#     im_small.save("./ExtendedYaleB_"+"300"+"x"+"300"+"_to_"+str(w)+"x"+str(h)+"/"+str(label)+"/"+path[24:])
 #     ind+=1
 # pdb.set_trace()
 

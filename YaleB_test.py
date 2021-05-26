@@ -174,7 +174,7 @@ for cla in classes:
     #             pass
     #             if D_used[k]==1:
     #                 continue
-    #             ratios=(D_parts[:,k])/residual[D_argmaxs[:,i]]
+    #             ratios=(D_parts[:,k])/residual[D_argmaxs[:,k]]
     #             # ratios=ratios[ratios!=np.nan]
     #             ratios=ratios[ratios!=np.inf]
     #             # ratios=ratios[ratios!=0.]
