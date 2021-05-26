@@ -79,6 +79,58 @@ def transform_var(Y_one,D_all,D_argmaxs):
     # print(f"cal var time is: {end_time-start_time} s")
     return X_one_test
 
+def transform_normal(Y_one,D_all,D_argmaxs):
+    global n_atoms
+    global n_classes
+    global transform_n_nonzero_coefs
+    X_one_test=np.empty((n_atoms*n_classes,1))
+    start_time=time.time()
+    D_used=np.empty(D_all.shape[1])
+    D_used[:]=-1
+    residual=Y_one
+    X_temp=np.empty(0)
+    for j in range(30):
+        start_time_j=time.time()
+        min_variance=np.inf
+        min_ind=0
+        aa=np.dot(residual,D_all).argsort()
+        for k in range(D_all.shape[1]):
+            # if D_used[aa[D_all.shape[1]-k-1]]==1:
+            #     continue
+            min_ind=aa[D_all.shape[1]-k-1]
+            break
+        # for k in range(D_all.shape[1]):
+        #     pass
+        #     if D_used[k]==1:
+        #         continue
+        #     ratios=(D_parts[:,k])/residual[D_argmaxs[:,k]]
+        #     # ratios=ratios[ratios!=np.nan]
+        #     ratios=ratios[ratios!=np.inf]
+        #     # ratios=ratios[ratios!=0.]
+        #     ratios_mean=ratios.mean()
+        #     ratios=ratios/ratios_mean
+        #     cur_var=np.var(ratios)
+        #     if cur_var<min_variance:
+        #         min_variance=cur_var
+        #         min_ind=k
+        first_atmo_index=min_ind
+        D_used[first_atmo_index]=1
+        D_part=D_all[:,D_used==1]
+        D_part_pinv=np.linalg.pinv(D_part)
+        X_temp=np.dot(D_part_pinv,residual)
+        solved_resi=np.dot(D_part,X_temp)
+        residual=residual-solved_resi
+        end_time_j=time.time()
+        # print(f"j is :{j}")
+        # print(f"part cal var time is: {end_time_j-start_time_j} s")
+        sys.stdout.flush()
+    X_one_test[:,0]=0.
+    X_one_test[D_used==1,0]=X_temp
+    end_time=time.time()
+    print(abs(residual).sum())
+    # print(f"cal var time is: {end_time-start_time} s")
+    return X_one_test
+
 n_classes=0
 classes=list([])
 labels=list([])
