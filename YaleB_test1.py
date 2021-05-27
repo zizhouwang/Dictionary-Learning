@@ -210,6 +210,7 @@ for cla in classes:
     label_index=lab_to_ind_dir[cla]
     indexs=indexs[start_test_number:start_test_number+test_number]
     Y_test=np.zeros((im_vec_len,test_number))
+
     ind=0
     temp_process=0
     for i in indexs:
@@ -226,6 +227,21 @@ for cla in classes:
         Y_test[:,ind]=im_vec
         ind+=1
     Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*reg_mul
+
+
+
+
+    Y_one=Y_test[:,0]+1e-6
+    Y_one=1/abs(Y_one)
+    D_nonzero_all=abs(D_all+1e-6)
+    res=np.dot(Y_one,D_nonzero_all)
+    for i in range(res.shape[0]):
+        print(res[i])
+    pdb.set_trace()
+
+
+    
+
     coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm='omp')
     X_test=np.empty((n_atoms*n_classes,Y_test.shape[1]))
     # for i in range(Y_test.shape[1]):
