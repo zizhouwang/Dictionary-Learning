@@ -206,6 +206,7 @@ W_all=np.load('W_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+st
 # A_all=np.load('A_all_YaleB_'+str(update_times))
 average_accuracy=0.
 for cla in classes:
+    cla=12
     indexs=np.array(np.where(labels==cla))[0]
     label_index=lab_to_ind_dir[cla]
     indexs=indexs[start_test_number:start_test_number+test_number]
@@ -231,12 +232,15 @@ for cla in classes:
 
 
 
-    Y_one=Y_test[:,0]+1e-6
-    Y_one=1/abs(Y_one)
-    D_nonzero_all=abs(D_all+1e-6)
-    res=np.dot(Y_one,D_nonzero_all)
+    Y_one=abs(Y_test[:,2])+1e-8
+    Y_one=1/Y_one
+    D_z_all=abs(D_all)
+    res=np.dot(Y_one,D_z_all)
+    aa=D_z_all[:,0]
+    bb=(Y_one*aa)%1e+5
     for i in range(res.shape[0]):
         print(res[i])
+    print(res.argmin())
     pdb.set_trace()
 
 
