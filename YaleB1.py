@@ -101,19 +101,24 @@ np.random.seed(int(t)%100)
 
 data_count=labels.shape[0]
 
-start_init_number=20
+start_init_number=15
 train_number=32
-update_times=32
+update_times=100
 im_vec_len=w*h
 transform_n_nonzero_coefs=30
 
 index = list([])
+inds_of_file_path=np.empty((n_classes,train_number*2),dtype=int)
 for i in classes:
-    labels_of_one_class=np.where(labels==i)[0]
+    ind_of_lab=lab_to_ind_dir[i]
+    labels_of_one_class=np.where(labels==i)[0][:train_number*2]
+    if i==22:
+        np.random.shuffle(labels_of_one_class)
+    inds_of_file_path[ind_of_lab]=labels_of_one_class
     if labels_of_one_class.shape[0]<start_init_number:
         print("某个类的样本不足，程序暂停")
         pdb.set_trace()
-    index.extend(np.where(labels==i)[0][:start_init_number])
+    index.extend(inds_of_file_path[ind_of_lab][:start_init_number])
 index = np.array(index)
 for i in range (n_classes):
     np.random.shuffle(index[start_init_number*i:start_init_number*i + start_init_number])
@@ -121,6 +126,7 @@ for i in range (n_classes):
 index_l = list([])
 for i in range (n_classes):
     index_l.extend(index[start_init_number*i:start_init_number*i +start_init_number])
+pdb.set_trace()
 y_labelled = labels[index_l]
 n_labelled = len(y_labelled)
 Y_labelled=np.zeros((im_vec_len,start_init_number*n_classes))
@@ -213,18 +219,17 @@ for i in range(update_times):
         A_all=np.dot(Q_Bs,Cs)
         DWA_all=np.vstack((D_all,W_all,A_all))
     for j in range(n_classes):
-        j_label=ind_to_lab_dir[j]
-        # if j==0 and i%10==0:
-        #     print(i)
-        #     sys.stdout.flush()
+        if j==0 and i%10==0:
+            print(i)
+            sys.stdout.flush()
         coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm='omp')
-        label_indexs_for_update=np.array(np.where(labels==j_label))[0][:train_number]
+        label_indexs_for_update=inds_of_file_path[j][:train_number]
         new_index=[label_indexs_for_update[(i+start_init_number)%32]]
         new_label=labels[new_index][0]
-        lab_index=lab_to_ind_dir[new_label]
+        lab_index=j
         im_vec=load_img(file_paths[new_index][0])
-        print(file_paths[new_index][0])
-        sys.stdout.flush()
+        # print(file_paths[new_index][0])
+        # sys.stdout.flush()
         im_vec=im_vec/255.
         new_y=np.array(im_vec,dtype = float)
         new_y=preprocessing.normalize(new_y.T, norm='l2').T*reg_mul
@@ -284,6 +289,8 @@ print("W_all saved")
 # A_all=A_all.reshape(-1,n_classes*n_atoms).T
 np.save('A_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),A_all)
 print("A_all saved")
+
+np.save('inds_of_file_path_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),inds_of_file_path)
 
     # D_all=np.zeros((data.shape[1],0))
     # for i in range(n_classes):

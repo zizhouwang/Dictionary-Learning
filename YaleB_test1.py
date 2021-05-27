@@ -167,7 +167,7 @@ data_count=labels.shape[0]
 
 start_init_number=15
 train_number=32
-update_times=32
+update_times=100
 start_test_number=train_number
 test_number=32
 im_vec_len=w*h
@@ -201,17 +201,16 @@ for i in range(D_all.shape[1]):
     D_argmaxs[:,i]=np.argsort(D_all[:,i])[-maxs_count:]
     D_parts[:,i]=D_all[D_argmaxs[:,i],i]
 W_all=np.load('W_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy')
+inds_of_file_path=np.load('inds_of_file_path_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy')
 # D_all=np.load('D_all_YaleB_init'+'.npy')
 # W_all=np.load('W_all_YaleB_init'+'.npy')
 # A_all=np.load('A_all_YaleB_'+str(update_times))
 average_accuracy=0.
 for cla in classes:
-    cla=12
-    indexs=np.array(np.where(labels==cla))[0]
     label_index=lab_to_ind_dir[cla]
+    indexs=inds_of_file_path[label_index]
     indexs=indexs[start_test_number:start_test_number+test_number]
-    Y_test=np.zeros((im_vec_len,test_number))
-
+    Y_test=np.empty((im_vec_len,test_number))
     ind=0
     temp_process=0
     for i in indexs:
@@ -232,16 +231,16 @@ for cla in classes:
 
 
 
-    Y_one=abs(Y_test[:,2])+1e-8
-    Y_one=1/Y_one
-    D_z_all=abs(D_all)
-    res=np.dot(Y_one,D_z_all)
-    aa=D_z_all[:,0]
-    bb=(Y_one*aa)%1e+5
-    for i in range(res.shape[0]):
-        print(res[i])
-    print(res.argmin())
-    pdb.set_trace()
+    # Y_one=abs(Y_test[:,2])+1e-8
+    # Y_one=1/Y_one
+    # D_z_all=abs(D_all)
+    # res=np.dot(Y_one,D_z_all)
+    # aa=D_z_all[:,0]
+    # bb=(Y_one*aa)%1e+5
+    # for i in range(res.shape[0]):
+    #     print(res[i])
+    # print(res.argmin())
+    # pdb.set_trace()
 
 
     
@@ -278,7 +277,6 @@ for cla in classes:
     print('accuracy : '+str(right_num/test_number))
     average_accuracy+=right_num/test_number
     sys.stdout.flush()
-    pdb.set_trace()
 
 average_accuracy=average_accuracy/n_classes
 print('average_accuracy : '+str(average_accuracy))
