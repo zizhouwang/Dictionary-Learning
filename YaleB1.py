@@ -108,25 +108,37 @@ im_vec_len=w*h
 transform_n_nonzero_coefs=30
 
 index = list([])
-inds_of_file_path=np.empty((n_classes,train_number*2),dtype=int)
+inds_of_file_path_path='inds_of_file_path_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy'
+if os.path.isfile(inds_of_file_path_path):
+    inds_of_file_path=np.load(inds_of_file_path_path)
+    for i in classes:
+        ind_of_lab=lab_to_ind_dir[i]
+        labels_of_one_class=inds_of_file_path[ind_of_lab]
+        if i==28 or i==31 or i==33 or i==36:
+            np.random.shuffle(labels_of_one_class)
+        inds_of_file_path[ind_of_lab]=labels_of_one_class
+        if labels_of_one_class.shape[0]<start_init_number:
+            print("某个类的样本不足，程序暂停")
+            pdb.set_trace()
+else:
+    inds_of_file_path=np.empty((n_classes,train_number*2),dtype=int)
+    for i in classes:
+        ind_of_lab=lab_to_ind_dir[i]
+        labels_of_one_class=np.where(labels==i)[0][:train_number*2]
+        inds_of_file_path[ind_of_lab]=labels_of_one_class
+        if labels_of_one_class.shape[0]<start_init_number:
+            print("某个类的样本不足，程序暂停")
+            pdb.set_trace()
 for i in classes:
     ind_of_lab=lab_to_ind_dir[i]
-    labels_of_one_class=np.where(labels==i)[0][:train_number*2]
-    if i==22:
-        np.random.shuffle(labels_of_one_class)
-    inds_of_file_path[ind_of_lab]=labels_of_one_class
-    if labels_of_one_class.shape[0]<start_init_number:
-        print("某个类的样本不足，程序暂停")
-        pdb.set_trace()
     index.extend(inds_of_file_path[ind_of_lab][:start_init_number])
 index = np.array(index)
-for i in range (n_classes):
-    np.random.shuffle(index[start_init_number*i:start_init_number*i + start_init_number])
+# for i in range (n_classes):
+#     np.random.shuffle(index[start_init_number*i:start_init_number*i + start_init_number])
 
 index_l = list([])
 for i in range (n_classes):
     index_l.extend(index[start_init_number*i:start_init_number*i +start_init_number])
-pdb.set_trace()
 y_labelled = labels[index_l]
 n_labelled = len(y_labelled)
 Y_labelled=np.zeros((im_vec_len,start_init_number*n_classes))
