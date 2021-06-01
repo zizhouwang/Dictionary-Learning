@@ -228,6 +228,12 @@ for cla in classes:
         ind+=1
     Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*reg_mul
 
+    # for i in range(Y_test.shape[1]):
+    #     Y_one=Y_test[:,i]
+    #     Y_one_min=Y_one[Y_one!=0.0].min()
+    #     Y_one+=Y_one_min
+    # Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*reg_mul
+
 
 
 
@@ -247,9 +253,12 @@ for cla in classes:
 
     coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm='omp')
     X_test=np.empty((n_atoms*n_classes,Y_test.shape[1]))
+
+    aa=Y_test[:,0]
     # for i in range(Y_test.shape[1]):
     #     X_test[:,i]=transform_var(Y_test[:,i],D_all,D_argmaxs).T[0]
-    X_test=(coder.transform(Y_test.T)).T
+    # X_test=(coder.transform(Y_test.T)).T
+    pdb.set_trace()
     # Y_pre=np.dot(D_all,X_test)
     # resi=abs(Y_test-Y_pre)
     # for i in range(resi.shape[1]):
