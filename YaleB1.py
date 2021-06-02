@@ -108,7 +108,7 @@ im_vec_len=w*h
 transform_n_nonzero_coefs=30
 
 index = list([])
-inds_of_file_path_path='inds_of_file_path_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy'
+inds_of_file_path_path='inds_of_file_path_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy'
 if os.path.isfile(inds_of_file_path_path):
     inds_of_file_path=np.load(inds_of_file_path_path)
     for i in classes:
@@ -116,19 +116,19 @@ if os.path.isfile(inds_of_file_path_path):
         labels_of_one_class=inds_of_file_path[ind_of_lab]
         # if i==28 or i==31 or i==33 or i==36:    #need to change label rank
         #     np.random.shuffle(labels_of_one_class)
-        inds_of_file_path[ind_of_lab]=labels_of_one_class
         if labels_of_one_class.shape[0]<start_init_number:
             print("某个类的样本不足，程序暂停")
             pdb.set_trace()
+        inds_of_file_path[ind_of_lab]=labels_of_one_class
 else:
     inds_of_file_path=np.empty((n_classes,train_number*2),dtype=int)
     for i in classes:
         ind_of_lab=lab_to_ind_dir[i]
         labels_of_one_class=np.where(labels==i)[0][:train_number*2]
-        inds_of_file_path[ind_of_lab]=labels_of_one_class
         if labels_of_one_class.shape[0]<start_init_number:
             print("某个类的样本不足，程序暂停")
             pdb.set_trace()
+        inds_of_file_path[ind_of_lab]=labels_of_one_class
 for i in classes:
     ind_of_lab=lab_to_ind_dir[i]
     index.extend(inds_of_file_path[ind_of_lab][:start_init_number])
@@ -159,6 +159,7 @@ for i in index_l:
     ind+=1
 Y_init = Y_labelled
 Y_init = preprocessing.normalize(Y_init.T, norm='l2').T*reg_mul
+Y_init=norm_Ys(Y_init)
 n_atoms = start_init_number
 n_neighbor = 8
 lamda = 0.5
@@ -222,7 +223,11 @@ for i in range(update_times):
             lab_index=lab_to_ind_dir[label]
             the_H[lab_index,k]=1
             the_Q[n_atoms*lab_index:n_atoms*(lab_index+1),k]=1
-        X_single =(coder.transform(Y_init.T)).T #X_single的每个列向量是一个图像的稀疏表征
+        # X_single=(coder.transform(Y_init.T)).T #X_single的每个列向量是一个图像的稀疏表征
+        # X_single=transform(D_all,Y_init,transform_n_nonzero_coefs)
+        X_single=np.zeros((D_all.shape[1],D_all.shape[1]),dtype=float)
+        for j in range(D_all.shape[1]):
+            X_single[j][j]=1.
         Bs=np.dot(Y_init,X_single.T)
         H_Bs=np.dot(the_H,X_single.T)
         Q_Bs=np.dot(the_Q,X_single.T)
@@ -240,18 +245,20 @@ for i in range(update_times):
         new_label=labels[new_index][0]
         lab_index=j
         im_vec=load_img(file_paths[new_index][0])
-        # print(file_paths[new_index][0])
-        # sys.stdout.flush()
+        print(file_paths[new_index][0])
+        sys.stdout.flush()
         im_vec=im_vec/255.
         new_y=np.array(im_vec,dtype = float)
         new_y=preprocessing.normalize(new_y.T, norm='l2').T*reg_mul
+        new_y=norm_Ys(new_y)
         new_y.reshape(n_features,1)
         new_h=np.zeros((n_classes,1))
         new_h[lab_index,0]=1
         new_q=np.zeros((n_atoms*n_classes,1))
         new_q[n_atoms*lab_index:n_atoms*(lab_index+1),0]=1
         new_yhq=np.vstack((new_y,new_h,new_q))
-        new_x=(coder.transform(new_y.T)).T
+        # new_x=(coder.transform(new_y.T)).T
+        new_x=transform(D_all,new_y,transform_n_nonzero_coefs)
         the_C=Cs
         the_u=(1/the_lambda)*np.dot(the_C,new_x)
         gamma=1/(1+np.dot(new_x.T,the_u))
@@ -289,20 +296,20 @@ print("train_time : "+str(end_t-start_t))
 # D_all=Ds
 # D_all=D_all.transpose((0,2,1))
 # D_all=D_all.reshape(-1,im_vec_len).T
-np.save('D_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),D_all)
+np.save('D_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),D_all)
 print("D_all saved")
 # W_all=Ws
 # W_all=W_all.transpose((0,2,1))
 # W_all=W_all.reshape(-1,n_classes).T
-np.save('W_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),W_all)
+np.save('W_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),W_all)
 print("W_all saved")
 # A_all=As
 # A_all=A_all.transpose((0,2,1))
 # A_all=A_all.reshape(-1,n_classes*n_atoms).T
-np.save('A_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),A_all)
+np.save('A_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),A_all)
 print("A_all saved")
 
-np.save('inds_of_file_path_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),inds_of_file_path)
+np.save('inds_of_file_path_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),inds_of_file_path)
 
     # D_all=np.zeros((data.shape[1],0))
     # for i in range(n_classes):

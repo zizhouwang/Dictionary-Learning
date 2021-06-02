@@ -13,6 +13,7 @@ import sys
 from numpy.linalg import norm, inv, pinv
 from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.decomposition import SparseCoder
+from sklearn import preprocessing
 import pdb
 
 import warnings
@@ -25,6 +26,16 @@ from joblib import Parallel
 premature = """ Orthogonal matching pursuit ended prematurely due to linear
 dependence in the dictionary. The requested precision might not have been met.
 """
+
+def remove_zero(Y_one):
+    Y_one_min=Y_one[Y_one!=0.0].min()
+    Y_one+=Y_one_min
+
+def norm_Ys(Y_s):
+    for i in range(Y_s.shape[1]):
+        remove_zero(Y_s[:,i])
+    Y_s = preprocessing.normalize(Y_s.T, norm='l2').T
+    return Y_s
 
 def norm_cols(X,eps=np.finfo(float).eps):
 	"""
@@ -45,9 +56,39 @@ def norm_cols_plus_petit_1(X,the_c):
     X_norm[:,Q] = X_norm[:,Q]/norms[Q]*the_c 
     return X_norm
 
-def transform(D_all,the_y,n_nonzero_coefs):
-    out = gram_omp(
-        Y_test[:,0], n_nonzero_coefs,
+def initialize_D(Y_all, n_atoms, y,n_labelled,seed=0):
+    n_classes = len(set(y))
+    n_sub_atoms = int(n_atoms/n_classes)
+    D = np.zeros((Y_all.shape[0],n_atoms))
+    ind_sup = np.arange(n_labelled,Y_all.shape[1])
+    np.random.seed(seed)
+    np.random.shuffle(ind_sup)
+
+    j = 0
+    for i in range (n_classes) :
+        ind_i = np.where(y==i)[0]
+        np.random.shuffle(ind_i)
+        if len(ind_i) >= n_sub_atoms: 
+            D[:,i*n_sub_atoms:(i+1)*n_sub_atoms] = np.copy(Y_all[:,ind_i[:n_sub_atoms]])
+        else :
+            D[:,i*n_sub_atoms:(i+1)*n_sub_atoms] = np.copy(np.hstack((Y_all[:,ind_i],Y_all[:,ind_sup[j:j + n_sub_atoms- len(ind_i)]])))
+            j = j + n_sub_atoms- len(ind_i)
+    D[:,n_classes*n_sub_atoms:] = np.copy(Y_all[:,ind_sup[j:j + n_atoms - n_classes*n_sub_atoms]])
+    return D
+
+def initialize_single_D(Y_all, n_atoms, y,n_labelled,seed=0,D_index=0):
+    return np.copy(Y_all[:,n_atoms*D_index:n_atoms*D_index+n_atoms])
+
+def transform(D_all,Y_s,n_nonzero_coefs):
+    X_res=np.empty((D_all.shape[1],Y_s.shape[1]))
+    for i in range(Y_s.shape[1]):
+        X_one=_transform(D_all,Y_s[:,i],n_nonzero_coefs)
+        X_res[:,i]=X_one
+    return X_res
+
+def _transform(D_all,the_y,n_nonzero_coefs):
+    out = gram_omp_ano(
+        D_all, the_y, n_nonzero_coefs,
         None, None,
         copy_Gram=False, copy_Xy=False,
         return_path=False)
@@ -111,8 +152,9 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
     """
     Gram=np.dot(D_all.T,D_all)
     Xy=np.dot(D_all.T,the_y)
-    Y_one_reci=1/the_y
-    Yd=np.dot(D_all.T,Y_one_reci)
+    residual=np.copy(the_y)
+    resi_reci=1./residual
+    resi_d=np.dot(D_all.T,resi_reci)
     Gram = Gram.copy('F') if copy_Gram else np.asfortranarray(Gram)
 
     if copy_Xy or not Xy.flags.writeable:
@@ -124,7 +166,6 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
 
     indices = np.arange(len(Gram))  # keeping track of swapping
     alpha = Xy
-    residual=np.copy(the_y)
     tol_curr = tol_0
     delta = 0
     gamma = np.empty(0)
@@ -139,10 +180,20 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
         coefs = np.empty_like(L)
 
     while True:
-        lam = np.argmax(np.abs(Y_one_reci))
-        if lam < n_active or alpha[lam] ** 2 < min_float:
+        # lam = np.argmax(np.abs(Xy))
+        lam = np.argmin(np.abs(resi_d-the_y.shape[0]))
+        if alpha[lam] ** 2 < min_float:
             # selected same atom twice, or inner product too small
-            warnings.warn(premature, RuntimeWarning, stacklevel=3)
+            # warnings.warn(premature, RuntimeWarning, stacklevel=3)
+            print("1 found problem")
+            pdb.set_trace()
+            sys.stdout.flush()
+            break
+        if lam < n_active:
+            # selected same atom twice, or inner product too small
+            # warnings.warn(premature, RuntimeWarning, stacklevel=3)
+            print("2 found problem")
+            sys.stdout.flush()
             break
         if n_active > 0:
             L[n_active, :n_active] = Gram[lam, :n_active]
@@ -154,7 +205,9 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
             v = nrm2(L[n_active, :n_active]) ** 2
             Lkk = Gram[lam, lam] - v
             if Lkk <= min_float:  # selected atoms are dependent
-                warnings.warn(premature, RuntimeWarning, stacklevel=3)
+                # warnings.warn(premature, RuntimeWarning, stacklevel=3)
+                print("3 found problem")
+                sys.stdout.flush()
                 break
             L[n_active, n_active] = sqrt(Lkk)
         else:
@@ -168,6 +221,11 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
         # solves LL'x = X'y as a composition of two triangular systems
         gamma, _ = potrs(L[:n_active, :n_active], Xy[:n_active], lower=True,
                          overwrite_b=False)
+        Y_pre=np.dot(D_all[:,indices[:n_active]],gamma)
+        residual-=Y_pre
+        resi_reci=1./residual
+        resi_reci[resi_reci==np.inf]=0.0
+        resi_d=np.dot(D_all.T,resi_reci)
         if return_path:
             coefs[:n_active, n_active - 1] = gamma
         beta = np.dot(Gram[:, :n_active], gamma)
@@ -186,3 +244,58 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
     else:
         return gamma, indices[:n_active], n_active
 
+def gram_omp_ano(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
+              copy_Gram=True, copy_Xy=True, return_path=False):
+    Gram=np.dot(D_all.T,D_all)
+    Gram_reci=np.linalg.inv(Gram)
+    Xy=np.dot(D_all.T,the_y)
+    residual=np.copy(the_y)
+    resi_reci=1./residual
+    resi_d=np.dot(D_all.T,resi_reci)
+    Gram = Gram.copy('F') if copy_Gram else np.asfortranarray(Gram)
+
+    if copy_Xy or not Xy.flags.writeable:
+        Xy = Xy.copy()
+
+    min_float = np.finfo(Gram.dtype).eps
+    nrm2, swap = linalg.get_blas_funcs(('nrm2', 'swap'), (Gram,))
+    potrs, = get_lapack_funcs(('potrs',), (Gram,))
+
+    indices = np.arange(len(Gram))  # keeping track of swapping
+    alpha = Xy
+    tol_curr = tol_0
+    delta = 0
+    gamma = np.empty(0)
+    n_active = 0
+    idx_used=np.zeros(D_all.shape[1],dtype=int)
+
+    while True:
+        # lam = np.argmax(np.abs(Xy))
+        lam = np.argmin(np.abs(resi_d-the_y.shape[0]))
+        idx_used[lam]=1
+        if abs(residual).sum() ** 2 < min_float:
+            # selected same atom twice, or inner product too small
+            # warnings.warn(premature, RuntimeWarning, stacklevel=3)
+            print("1 found problem")
+            pdb.set_trace()
+            sys.stdout.flush()
+            break
+
+        # indices[n_active], indices[lam] = indices[lam], indices[n_active]
+        n_active += 1
+        # solves LL'x = X'y as a composition of two triangular systems
+        D_part=D_all[:,idx_used==1]
+        Dy=np.dot(D_part.T,residual)
+        gamma=np.dot(np.linalg.inv(np.dot(D_part.T,D_part)),Dy)
+        if n_nonzero_coefs==n_active:
+            break
+        Y_pre=np.dot(D_part,gamma)
+        residual-=Y_pre
+        resi_reci=1./residual
+        resi_reci[resi_reci==np.inf]=0.0
+        resi_d=np.dot(D_all.T,resi_reci)
+        resi_d[idx_used==1]=np.inf
+    if return_path:
+        return gamma, idx_used==1, coefs[:, :n_active], n_active
+    else:
+        return gamma, idx_used==1, n_active

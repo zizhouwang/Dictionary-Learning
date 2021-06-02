@@ -227,13 +227,7 @@ for cla in classes:
         Y_test[:,ind]=im_vec
         ind+=1
     Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*reg_mul
-
-    # for i in range(Y_test.shape[1]):
-    #     Y_one=Y_test[:,i]
-    #     Y_one_min=Y_one[Y_one!=0.0].min()
-    #     Y_one+=Y_one_min
-    # Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*reg_mul
-
+    Y_test=norm_Ys(Y_test)
 
 
 
@@ -249,21 +243,15 @@ for cla in classes:
     # pdb.set_trace()
 
 
-    
+
 
     coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm='omp')
-    X_test=np.empty((n_atoms*n_classes,Y_test.shape[1]))
+    # X_test=np.empty((n_atoms*n_classes,Y_test.shape[1]))
 
-    aa=Y_test[:,0]
     # for i in range(Y_test.shape[1]):
     #     X_test[:,i]=transform_var(Y_test[:,i],D_all,D_argmaxs).T[0]
     # X_test=(coder.transform(Y_test.T)).T
-    pdb.set_trace()
-    # Y_pre=np.dot(D_all,X_test)
-    # resi=abs(Y_test-Y_pre)
-    # for i in range(resi.shape[1]):
-    #     print(resi[:,i].sum())
-    # pdb.set_trace()
+    X_test=transform(D_all,Y_test,transform_n_nonzero_coefs)
     the_H=np.dot(W_all,X_test)
     right_num=0.
     for i in range(test_number):
@@ -289,32 +277,3 @@ for cla in classes:
 
 average_accuracy=average_accuracy/n_classes
 print('average_accuracy : '+str(average_accuracy))
-# indexs=np.array(np.where(labels!=0))[0]
-# np.random.shuffle(indexs)
-# indexs=indexs[start_test_number:start_test_number+test_number]
-# Y_test=np.zeros((im_vec_len,test_number))
-# ind=0
-# temp_process=0
-# for i in indexs:
-#     if temp_process%100==0:
-#         print(temp_process)
-#         sys.stdout.flush()
-#     temp_process+=1
-#     im_vec=load_img(file_paths[i])
-#     im_vec=im_vec/255.
-#     im_vec=im_vec.T[0]
-#     if im_vec.shape[0]!=im_vec_len:
-#         print("存在总像素不为307200的图像 程序暂停")
-#         pdb.set_trace()
-#     Y_test[:,ind]=im_vec
-#     ind+=1
-# Y_test = preprocessing.normalize(Y_test.T, norm='l2').T*5
-# coder = SparseCoder(dictionary=D_all.T,transform_alpha=lamda/2., transform_algorithm='lasso_cd')
-# X_test=(coder.transform(Y_test.T)).T
-# the_H=np.dot(W_all,X_test)
-# right_num=0.
-# for i in range(test_number):
-#     pre=the_H[:,i].argmax()
-#     if pre!=0:
-#         right_num+=1.
-# print('accuracy : '+str(right_num/test_number))
