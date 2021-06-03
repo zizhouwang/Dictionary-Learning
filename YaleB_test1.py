@@ -194,14 +194,14 @@ n_iter_du = 50 # number max of iteration in dictionary update
 n_iter = 15 # number max of general iteration
 
 maxs_count=100
-D_all=np.load('D_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy')
+D_all=np.load('D_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy')
 D_argmaxs=np.empty((maxs_count,D_all.shape[1]),dtype=int)
 D_parts=np.empty((maxs_count,D_all.shape[1]))
 for i in range(D_all.shape[1]):
     D_argmaxs[:,i]=np.argsort(D_all[:,i])[-maxs_count:]
     D_parts[:,i]=D_all[D_argmaxs[:,i],i]
-W_all=np.load('W_all_YaleB_true_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy')
-inds_of_file_path=np.load('inds_of_file_path_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy')
+W_all=np.load('W_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy')
+inds_of_file_path=np.load('inds_of_file_path_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy')
 # D_all=np.load('D_all_YaleB_init'+'.npy')
 # W_all=np.load('W_all_YaleB_init'+'.npy')
 # A_all=np.load('A_all_YaleB_'+str(update_times))

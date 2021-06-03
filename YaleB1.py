@@ -236,7 +236,7 @@ for i in range(update_times):
         A_all=np.dot(Q_Bs,Cs)
         DWA_all=np.vstack((D_all,W_all,A_all))
     for j in range(n_classes):
-        if j==0 and i%10==0:
+        if j==0:
             print(i)
             sys.stdout.flush()
         coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm='omp')
@@ -245,8 +245,8 @@ for i in range(update_times):
         new_label=labels[new_index][0]
         lab_index=j
         im_vec=load_img(file_paths[new_index][0])
-        print(file_paths[new_index][0])
-        sys.stdout.flush()
+        # print(file_paths[new_index][0])
+        # sys.stdout.flush()
         im_vec=im_vec/255.
         new_y=np.array(im_vec,dtype = float)
         new_y=preprocessing.normalize(new_y.T, norm='l2').T*reg_mul
