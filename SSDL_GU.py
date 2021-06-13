@@ -29,9 +29,9 @@ dependence in the dictionary. The requested precision might not have been met.
 
 def remove_zero(Y_one):
     pass
-    # Y_one_min=Y_one[Y_one!=0.0].min()
-    # Y_one+=Y_one_min
-    Y_one+=0.6
+    Y_one_min=Y_one[Y_one!=0.0].min()
+    Y_one+=Y_one_min
+    # Y_one+=0.6
 
 def norm_Ys(Y_s):
     for i in range(Y_s.shape[1]):
@@ -282,6 +282,8 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
     n_active : int
         Number of active features at convergence.
     """
+    start_change=29
+
     Gram=np.dot(D_all.T,D_all)
     Xy=np.dot(D_all.T,the_y)
     residual=np.copy(the_y)
@@ -289,7 +291,7 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
     resi_reci[resi_reci==np.inf]=0.0
     D_resi=np.dot(D_all.T,resi_reci)
     Gram = Gram.copy('F') if copy_Gram else np.asfortranarray(Gram)
-    D_all_T=D_all.T
+    D_all_T=np.copy(D_all.T)
 
     if copy_Xy or not Xy.flags.writeable:
         Xy = Xy.copy()
@@ -317,7 +319,7 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
     while True:
         # lam = np.argmax(np.abs(Xy))
         lam=None
-        if n_active==0:
+        if n_active<start_change:
             lam = np.argmin(np.abs(D_resi[n_active:]-the_y.shape[0]))+n_active
         else:
             lam = np.argmax(np.abs(alpha))
@@ -333,6 +335,7 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
             # warnings.warn(premature, RuntimeWarning, stacklevel=3)
             print("2 found problem")
             sys.stdout.flush()
+            pdb.set_trace()
             break
         if n_active > 0:
             L[n_active, :n_active] = Gram[lam, :n_active]
@@ -356,27 +359,24 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
         Gram.T[n_active], Gram.T[lam] = swap(Gram.T[n_active], Gram.T[lam])
         indices[n_active], indices[lam] = indices[lam], indices[n_active]
         Xy[n_active], Xy[lam] = Xy[lam], Xy[n_active]
-        # D_all_T[n_active], D_all_T[lam] = D_all_T[lam], D_all_T[n_active]
+        if n_active<start_change:
+            temp=np.copy(D_all_T[lam])
+            D_all_T[lam]=D_all_T[n_active]
+            D_all_T[n_active]=temp
         n_active += 1
         # solves LL'x = X'y as a composition of two triangular systems
         gamma, _ = potrs(L[:n_active, :n_active], Xy[:n_active], lower=True,
                          overwrite_b=False)
-        # Y_pre=np.dot(D_all[:,indices[:n_active]],gamma)
-        # residual-=Y_pre
-        # resi_reci=1./residual
-        # resi_reci[resi_reci==np.inf]=0.0
-        # D_resi=np.dot(D_all_T,resi_reci)
-        if return_path:
-            coefs[:n_active, n_active - 1] = gamma
-        beta = np.dot(Gram[:, :n_active], gamma)
-        alpha = Xy - beta
-        if tol is not None:
-            tol_curr += delta
-            delta = np.inner(gamma, beta[:n_active])
-            tol_curr -= delta
-            if abs(tol_curr) <= tol:
-                break
-        elif n_active == max_features:
+        if n_active<start_change:
+            Y_pre=np.dot(D_all_T[:n_active].T,gamma)
+            residual=the_y-Y_pre
+            resi_reci=1./residual
+            resi_reci[resi_reci==np.inf]=0.0
+            D_resi=np.dot(D_all.T,resi_reci)
+        else:
+            beta = np.dot(Gram[:, :n_active], gamma)
+            alpha = Xy - beta
+        if n_active == max_features:
             break
     if return_path:
         return gamma, indices[:n_active], coefs[:, :n_active], n_active

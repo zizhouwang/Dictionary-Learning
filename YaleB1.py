@@ -114,8 +114,10 @@ if os.path.isfile(inds_of_file_path_path):
     for i in classes:
         ind_of_lab=lab_to_ind_dir[i]
         labels_of_one_class=inds_of_file_path[ind_of_lab]
-        # if i==28 or i==31 or i==33 or i==36:    #need to change label rank
-        #     np.random.shuffle(labels_of_one_class)
+        # if i==34 or i==39:    #need to change label rank
+        if i==34:    #need to change label rank
+            labels_of_one_class.sort()
+            # np.random.shuffle(labels_of_one_class)
         if labels_of_one_class.shape[0]<start_init_number:
             print("某个类的样本不足，程序暂停")
             pdb.set_trace()
