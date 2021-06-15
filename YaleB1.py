@@ -217,7 +217,7 @@ the_lambda=lambda_init
 DWA_all=None
 for i in range(update_times):
     if i==0:
-        coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm='omp')
+        # coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm='omp')
         the_H=np.zeros((n_classes,Y_init.shape[1]),dtype=int)
         the_Q=np.zeros((n_atoms*n_classes,Y_init.shape[1]),dtype=int)
         for k in range(Y_init.shape[1]):

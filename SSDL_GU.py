@@ -29,9 +29,9 @@ dependence in the dictionary. The requested precision might not have been met.
 
 def remove_zero(Y_one):
     pass
-    Y_one_min=Y_one[Y_one!=0.0].min()
-    Y_one+=Y_one_min
-    # Y_one+=0.6
+    # Y_one_min=Y_one[Y_one!=0.0].min()
+    # Y_one+=Y_one_min
+    Y_one+=0.6
 
 def norm_Ys(Y_s):
     for i in range(Y_s.shape[1]):
@@ -282,7 +282,7 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
     n_active : int
         Number of active features at convergence.
     """
-    start_change=29
+    start_change=15
 
     Gram=np.dot(D_all.T,D_all)
     Xy=np.dot(D_all.T,the_y)
@@ -320,7 +320,7 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
         # lam = np.argmax(np.abs(Xy))
         lam=None
         if n_active<start_change:
-            lam = np.argmin(np.abs(D_resi[n_active:]-the_y.shape[0]))+n_active
+            lam = np.argmin(np.abs(abs(D_resi[n_active:])-the_y.shape[0]))+n_active
         else:
             lam = np.argmax(np.abs(alpha))
         # lam = np.argmin(np.abs(D_resi[n_active:]-the_y.shape[0]))+n_active
@@ -370,7 +370,12 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
         if n_active<start_change:
             Y_pre=np.dot(D_all_T[:n_active].T,gamma)
             residual=the_y-Y_pre
-            resi_reci=1./residual
+            resi_temp=np.copy(residual)
+            min_temp=abs(resi_temp.min())*30.
+            resi_temp+=min_temp
+            resi_temp = preprocessing.normalize(resi_temp.reshape(1,-1), norm='l2')[0]
+            resi_reci=1./resi_temp
+            # resi_reci[resi_reci<0]=0.
             resi_reci[resi_reci==np.inf]=0.0
             D_resi=np.dot(D_all.T,resi_reci)
         else:
