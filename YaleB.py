@@ -217,7 +217,6 @@ the_lambda=lambda_init
 DWA_all=None
 for i in range(update_times):
     if i==0:
-        # coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm='omp')
         the_H=np.zeros((n_classes,Y_init.shape[1]),dtype=int)
         the_Q=np.zeros((n_atoms*n_classes,Y_init.shape[1]),dtype=int)
         for k in range(Y_init.shape[1]):
@@ -225,8 +224,6 @@ for i in range(update_times):
             lab_index=lab_to_ind_dir[label]
             the_H[lab_index,k]=1
             the_Q[n_atoms*lab_index:n_atoms*(lab_index+1),k]=1
-        # X_single=(coder.transform(Y_init.T)).T #X_single的每个列向量是一个图像的稀疏表征
-        # X_single=transform(D_all,Y_init,transform_n_nonzero_coefs)
         X_single=np.zeros((D_all.shape[1],D_all.shape[1]),dtype=float)
         for j in range(D_all.shape[1]):
             X_single[j][j]=1.
@@ -247,8 +244,6 @@ for i in range(update_times):
         new_label=labels[new_index][0]
         lab_index=j
         im_vec=load_img(file_paths[new_index][0])
-        # print(file_paths[new_index][0])
-        # sys.stdout.flush()
         im_vec=im_vec/255.
         new_y=np.array(im_vec,dtype = float)
         new_y=preprocessing.normalize(new_y.T, norm='l2').T*reg_mul
@@ -268,22 +263,6 @@ for i in range(update_times):
         new_C=(1/the_lambda)*the_C-gamma*np.dot(the_u,the_u.T)
         new_DWA=DWA_all+gamma*np.dot(the_r,the_u.T)
         DWA_all=new_DWA
-
-        # the_B=Bs
-        # the_H_B=H_Bs
-        # the_Q_B=Q_Bs
-        # new_B=the_B+np.dot(new_y,new_x.T)
-        # new_H_B=the_H_B+np.dot(new_h,new_x.T)
-        # new_Q_B=the_Q_B+np.dot(new_q,new_x.T)
-        # new_C=the_C-(np.matrix(the_C)*np.matrix(new_x)*np.matrix(new_x.T)*np.matrix(the_C))/(np.matrix(new_x.T)*np.matrix(the_C)*np.matrix(new_x)+1)
-        # Bs=new_B
-        # H_Bs=new_H_B
-        # Q_Bs=new_Q_B
-        # Cs=new_C
-        # new_D=np.dot(new_B,new_C)
-        # D_all=new_D
-        # W_all=np.dot(new_H_B,new_C)
-        # A_all=np.dot(new_Q_B,new_C)
     part_lambda=(1-i/update_times)
     the_lambda=1-(1-lambda_init)*part_lambda*part_lambda*part_lambda
     D_all=DWA_all[0:D_all.shape[0],:]
@@ -295,36 +274,11 @@ for i in range(update_times):
     DWA_all=np.vstack((D_all,W_all,A_all))
 end_t=time.time()
 print("train_time : "+str(end_t-start_t))
-# D_all=Ds
-# D_all=D_all.transpose((0,2,1))
-# D_all=D_all.reshape(-1,im_vec_len).T
 np.save('D_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),D_all)
 print("D_all saved")
-# W_all=Ws
-# W_all=W_all.transpose((0,2,1))
-# W_all=W_all.reshape(-1,n_classes).T
 np.save('W_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),W_all)
 print("W_all saved")
-# A_all=As
-# A_all=A_all.transpose((0,2,1))
-# A_all=A_all.reshape(-1,n_classes*n_atoms).T
 np.save('A_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),A_all)
 print("A_all saved")
 
 np.save('inds_of_file_path_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),inds_of_file_path)
-
-    # D_all=np.zeros((data.shape[1],0))
-    # for i in range(n_classes):
-    #     D_all=np.hstack((D_all,np.copy(Ds[i])))
-    # np.save('D_all_YaleB_'+str(update_times),D_all)
-    # print("D_all saved")
-    # W_all=np.zeros((Ws.shape[1],0))
-    # for i in range(n_classes):
-    #     W_all=np.hstack((W_all,np.copy(Ws[i])))
-    # np.save('W_all_YaleB_'+str(update_times),W_all)
-    # print("W_all saved")
-    # A_all=np.zeros((As.shape[1],0))
-    # for i in range(n_classes):
-    #     A_all=np.hstack((A_all,np.copy(As[i])))
-    # np.save('A_all_YaleB_'+str(update_times),A_all)
-    # print("A_all saved")
