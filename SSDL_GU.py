@@ -371,7 +371,7 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
             Y_pre=np.dot(D_all_T[:n_active].T,gamma)
             residual=the_y-Y_pre
             resi_temp=np.copy(residual)
-            min_temp=abs(resi_temp.min())*30.
+            min_temp=abs(resi_temp.min())*15.
             resi_temp+=min_temp
             resi_temp = preprocessing.normalize(resi_temp.reshape(1,-1), norm='l2')[0]
             resi_reci=1./resi_temp
