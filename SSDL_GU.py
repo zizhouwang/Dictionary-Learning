@@ -22,16 +22,35 @@ from math import sqrt
 from scipy import linalg
 from scipy.linalg.lapack import get_lapack_funcs
 from joblib import Parallel
+from PIL import Image
+import cv2
 
 premature = """ Orthogonal matching pursuit ended prematurely due to linear
 dependence in the dictionary. The requested precision might not have been met.
 """
 
+def load_img(path):
+    im=Image.open(path)    # 读取文件
+    # img = cv2.imread(path)
+    # gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # sift = cv2.xfeatures2d.SIFT_create()
+    # pdb.set_trace()
+    # _, des = sift.detectAndCompute(gray, None)
+    # pdb.set_trace()
+    im=np.asarray(im,dtype=float)
+    im_dimen=len(im.shape)
+    im_vec=None
+    if im_dimen==3:
+        im_vec=im.transpose((1,0,2)).reshape(-1,1)
+    if im_dimen==2:
+        im_vec=im.T.reshape(-1,1)
+    return im_vec
+
 def remove_zero(Y_one):
     pass
     # Y_one_min=Y_one[Y_one!=0.0].min()
     # Y_one+=Y_one_min
-    Y_one+=0.6
+    # Y_one+=0.6
 
 def norm_Ys(Y_s):
     for i in range(Y_s.shape[1]):
@@ -98,6 +117,74 @@ def _transform(D_all,the_y,n_nonzero_coefs):
     X_one=np.zeros(D_all.shape[1])
     X_one[idx] = x
     return X_one
+
+def DWA_all_init(D_all,W_all,A_all,n_classes,n_atoms,Y_init,y_labelled,lab_to_ind_dir):
+    the_H=np.zeros((n_classes,Y_init.shape[1]),dtype=int)
+    the_Q=np.zeros((n_atoms*n_classes,Y_init.shape[1]),dtype=int)
+    for k in range(Y_init.shape[1]):
+        label=y_labelled[k]
+        lab_index=lab_to_ind_dir[label]
+        the_H[lab_index,k]=1
+        the_Q[n_atoms*lab_index:n_atoms*(lab_index+1),k]=1
+    X_single=np.zeros((D_all.shape[1],D_all.shape[1]),dtype=float)
+    for j in range(D_all.shape[1]):
+        X_single[j][j]=1.
+    H_Bs=np.dot(the_H,X_single.T)
+    Q_Bs=np.dot(the_Q,X_single.T)
+    Cs=np.linalg.inv(np.dot(X_single,X_single.T))
+    W_all=np.dot(H_Bs,Cs)
+    A_all=np.dot(Q_Bs,Cs)
+    DWA_all=np.vstack((D_all,W_all,A_all))
+    return DWA_all,W_all,A_all,Cs
+
+def train(
+    DWA_all,D_all,W_all,A_all,Cs,labels,
+    file_paths,inds_of_file_path,
+    train_number,start_init_number,update_times,update_index,
+    n_classes,n_atoms,n_features,lambda_init,the_lambda,transform_n_nonzero_coefs,
+    omp_tag):
+    for j in range(n_classes):
+        if j==0:
+            print(update_index)
+            sys.stdout.flush()
+        coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm='omp')
+        label_indexs_for_update=inds_of_file_path[j][:train_number]
+        new_index=[label_indexs_for_update[(update_index+start_init_number)%train_number]]
+        new_label=labels[new_index][0]
+        lab_index=j
+        im_vec=load_img(file_paths[new_index][0])
+        im_vec=im_vec/255.
+        new_y=np.array(im_vec,dtype = float)
+        new_y=preprocessing.normalize(new_y.T, norm='l2').T
+        new_y=norm_Ys(new_y)
+        new_y.reshape(n_features,1)
+        new_h=np.zeros((n_classes,1))
+        new_h[lab_index,0]=1
+        new_q=np.zeros((n_atoms*n_classes,1))
+        new_q[n_atoms*lab_index:n_atoms*(lab_index+1),0]=1
+        new_yhq=np.vstack((new_y,new_h,new_q))
+        new_x=None
+        if omp_tag=="true":
+            new_x=(coder.transform(new_y.T)).T
+        if omp_tag=="wzz":
+            new_x=transform(D_all,new_y,transform_n_nonzero_coefs)
+        the_C=Cs
+        the_u=(1/the_lambda)*np.dot(the_C,new_x)
+        gamma=1/(1+np.dot(new_x.T,the_u))
+        the_r=new_yhq-np.dot(DWA_all,new_x)
+        new_C=(1/the_lambda)*the_C-gamma*np.dot(the_u,the_u.T)
+        new_DWA=DWA_all+gamma*np.dot(the_r,the_u.T)
+        DWA_all=new_DWA
+    part_lambda=(1-update_index/update_times)
+    the_lambda=1-(1-lambda_init)*part_lambda*part_lambda*part_lambda
+    D_all=DWA_all[0:D_all.shape[0],:]
+    W_all=DWA_all[D_all.shape[0]:D_all.shape[0]+W_all.shape[0],:]
+    A_all=DWA_all[D_all.shape[0]+W_all.shape[0]:,:]
+    D_all=preprocessing.normalize(D_all.T, norm='l2').T
+    W_all=preprocessing.normalize(W_all.T, norm='l2').T
+    A_all=preprocessing.normalize(A_all.T, norm='l2').T
+    DWA_all=np.vstack((D_all,W_all,A_all))
+    return DWA_all,D_all,W_all,A_all,the_lambda
 
 def _gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
               copy_Gram=True, copy_Xy=True, return_path=False):

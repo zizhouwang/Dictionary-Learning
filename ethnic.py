@@ -87,14 +87,14 @@ classes=list([])
 labels=list([])
 file_paths=list([])
 # ind_to_lab_dir={0:"仫佬族",1:"纳西族",2:"怒族",3:"普米族",4:"羌族",5:"撒拉族",6:"畲族"}
-lab_to_ind_dir={0:0,1:1,2:2,3:3,4:4,5:5,6:6}
-ind_to_lab_dir={0:0,1:1,2:2,3:3,4:4,5:5,6:6}
+lab_to_ind_dir={0:0,1:1,2:2,3:3,4:4,5:5,6:6,7:7}
+ind_to_lab_dir={0:0,1:1,2:2,3:3,4:4,5:5,6:6,7:7}
 w=160
 h=160
 train_number_of_every_cla=list([])
 for i in range(8):
     dir_path="./"+py_file_name+"_"+str(w)+"x"+str(h)+"/"+str(i)
-    # dir_path="./"+py_file_name+"_original/"+str(i)
+    # dir_path="./"+py_file_name+"_origin/"+str(i)
     if os.path.isdir(dir_path):
         num_of_cla=0
         n_classes+=1

@@ -26,12 +26,6 @@ def create_dir_if_not_exist(path):
     if not os.path.exists(path):
         os.mkdir(path)
 
-
-def load_img(path):
-    im = Image.open(path)    # 读取文件
-    im_vec=np.asarray(im,dtype=float).T.reshape(-1,1)
-    return im_vec
-
 def write_to_file(path,obj):
     with open(path, mode='a+', encoding="utf-8") as w:
         w.seek(0)
@@ -184,10 +178,11 @@ n_features = Y_init.shape[0]
 Ds=np.empty((n_classes,im_vec_len,n_atoms))
 Ws=np.empty((n_classes,n_classes,start_init_number))
 As=np.empty((n_classes,n_atoms*n_classes,start_init_number))
-Bs=np.empty((im_vec_len,start_init_number*n_classes))
-H_Bs=np.empty((n_classes,start_init_number*n_classes))
-Q_Bs=np.empty((n_atoms*n_classes,start_init_number*n_classes))
-Cs=np.empty((start_init_number,start_init_number*n_classes))
+# Bs=np.empty((im_vec_len,start_init_number*n_classes))
+# H_Bs=np.empty((n_classes,start_init_number*n_classes))
+# Q_Bs=np.empty((n_atoms*n_classes,start_init_number*n_classes))
+# Cs=np.empty((start_init_number,start_init_number*n_classes))
+Cs=None
 for i in range(n_classes):
     D = initialize_single_D(Y_init, n_atoms, y_labelled,n_labelled,D_index=i)
     # D = norm_cols_plus_petit_1(D,c)
@@ -209,69 +204,18 @@ A_all=As
 A_all=A_all.transpose((0,2,1))
 A_all=A_all.reshape(-1,n_classes*n_atoms).T
 
-# caled_number=np.zeros(n_classes,dtype=int)
-# for i in range(n_classes):
-#     caled_number[i]=start_init_number
 lambda_init=0.9985
 the_lambda=lambda_init
 DWA_all=None
-for i in range(update_times):
-    if i==0:
-        the_H=np.zeros((n_classes,Y_init.shape[1]),dtype=int)
-        the_Q=np.zeros((n_atoms*n_classes,Y_init.shape[1]),dtype=int)
-        for k in range(Y_init.shape[1]):
-            label=y_labelled[k]
-            lab_index=lab_to_ind_dir[label]
-            the_H[lab_index,k]=1
-            the_Q[n_atoms*lab_index:n_atoms*(lab_index+1),k]=1
-        X_single=np.zeros((D_all.shape[1],D_all.shape[1]),dtype=float)
-        for j in range(D_all.shape[1]):
-            X_single[j][j]=1.
-        Bs=np.dot(Y_init,X_single.T)
-        H_Bs=np.dot(the_H,X_single.T)
-        Q_Bs=np.dot(the_Q,X_single.T)
-        Cs=np.linalg.inv(np.dot(X_single,X_single.T))
-        W_all=np.dot(H_Bs,Cs)
-        A_all=np.dot(Q_Bs,Cs)
-        DWA_all=np.vstack((D_all,W_all,A_all))
-    for j in range(n_classes):
-        if j==0:
-            print(i)
-            sys.stdout.flush()
-        coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm='omp')
-        label_indexs_for_update=inds_of_file_path[j][:train_number]
-        new_index=[label_indexs_for_update[(i+start_init_number)%32]]
-        new_label=labels[new_index][0]
-        lab_index=j
-        im_vec=load_img(file_paths[new_index][0])
-        im_vec=im_vec/255.
-        new_y=np.array(im_vec,dtype = float)
-        new_y=preprocessing.normalize(new_y.T, norm='l2').T*reg_mul
-        new_y=norm_Ys(new_y)
-        new_y.reshape(n_features,1)
-        new_h=np.zeros((n_classes,1))
-        new_h[lab_index,0]=1
-        new_q=np.zeros((n_atoms*n_classes,1))
-        new_q[n_atoms*lab_index:n_atoms*(lab_index+1),0]=1
-        new_yhq=np.vstack((new_y,new_h,new_q))
-        # new_x=(coder.transform(new_y.T)).T
-        new_x=transform(D_all,new_y,transform_n_nonzero_coefs)
-        the_C=Cs
-        the_u=(1/the_lambda)*np.dot(the_C,new_x)
-        gamma=1/(1+np.dot(new_x.T,the_u))
-        the_r=new_yhq-np.dot(DWA_all,new_x)
-        new_C=(1/the_lambda)*the_C-gamma*np.dot(the_u,the_u.T)
-        new_DWA=DWA_all+gamma*np.dot(the_r,the_u.T)
-        DWA_all=new_DWA
-    part_lambda=(1-i/update_times)
-    the_lambda=1-(1-lambda_init)*part_lambda*part_lambda*part_lambda
-    D_all=DWA_all[0:D_all.shape[0],:]
-    W_all=DWA_all[D_all.shape[0]:D_all.shape[0]+W_all.shape[0],:]
-    A_all=DWA_all[D_all.shape[0]+W_all.shape[0]:,:]
-    D_all=preprocessing.normalize(D_all.T, norm='l2').T
-    W_all=preprocessing.normalize(W_all.T, norm='l2').T
-    A_all=preprocessing.normalize(A_all.T, norm='l2').T
-    DWA_all=np.vstack((D_all,W_all,A_all))
+
+for update_index in range(update_times):
+    if update_index==0:
+        DWA_all,W_all,A_all,Cs=DWA_all_init(D_all,W_all,A_all,n_classes,n_atoms,Y_init,y_labelled,lab_to_ind_dir)
+    train(
+    DWA_all,D_all,W_all,A_all,Cs,labels,
+    file_paths,inds_of_file_path,
+    train_number,start_init_number,update_times,update_index,
+    n_classes,n_atoms,n_features,lambda_init,the_lambda,transform_n_nonzero_coefs)
 end_t=time.time()
 print("train_time : "+str(end_t-start_t))
 np.save('D_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),D_all)

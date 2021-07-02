@@ -152,12 +152,13 @@ n_classes=0
 classes=list([])
 labels=list([])
 file_paths=list([])
-lab_to_ind_dir={0:0,1:1,2:2,3:3,4:4,5:5,6:6}
-ind_to_lab_dir={0:0,1:1,2:2,3:3,4:4,5:5,6:6}
+lab_to_ind_dir={0:0,1:1,2:2,3:3,4:4,5:5,6:6,7:7}
+ind_to_lab_dir={0:0,1:1,2:2,3:3,4:4,5:5,6:6,7:7}
 w=160
 h=160
 im_vec_len=w*h*3
 dir_path="./"+py_file_name+"_"+str(w)+"x"+str(h)+"_test"
+# dir_path="./"+py_file_name+"_"+str(w)+"x"+str(h)+""
 
 D_all=np.load("D_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+"_"+str(update_times)+".npy")
 W_all=np.load("W_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+"_"+str(update_times)+".npy")
