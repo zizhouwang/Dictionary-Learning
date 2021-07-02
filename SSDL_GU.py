@@ -50,7 +50,7 @@ def remove_zero(Y_one):
     pass
     # Y_one_min=Y_one[Y_one!=0.0].min()
     # Y_one+=Y_one_min
-    # Y_one+=0.6
+    Y_one+=0.6
 
 def norm_Ys(Y_s):
     for i in range(Y_s.shape[1]):

@@ -215,7 +215,8 @@ for update_index in range(update_times):
     DWA_all,D_all,W_all,A_all,Cs,labels,
     file_paths,inds_of_file_path,
     train_number,start_init_number,update_times,update_index,
-    n_classes,n_atoms,n_features,lambda_init,the_lambda,transform_n_nonzero_coefs)
+    n_classes,n_atoms,n_features,lambda_init,the_lambda,transform_n_nonzero_coefs,
+    "wzz")
 end_t=time.time()
 print("train_time : "+str(end_t-start_t))
 np.save('D_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),D_all)
