@@ -187,8 +187,6 @@ for i in range(n_classes):
     D = initialize_single_D(Y_init, n_atoms, y_labelled,n_labelled,D_index=i)
     # D = norm_cols_plus_petit_1(D,c)
     Ds[i]=D
-D_init=np.copy(Ds[0])
-   
 
 print("initializing classifier ... done")
 start_t=time.time()

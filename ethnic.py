@@ -140,8 +140,6 @@ t=time.time()
 
 np.random.seed(int(t)%100)
 
-data_count=labels.shape[0]
-
 start_init_number=30
 train_number=300
 update_times=300
