@@ -1,8 +1,18 @@
 import scipy.io
+import time
 import pdb
 import numpy as np
+from SSDL_GU import *
+from sklearn.decomposition import SparseCoder
+from numpy.linalg import norm
+import sys
 from sklearn import preprocessing
-import time
+from sklearn.neighbors import NearestNeighbors
+from mnist import MNIST
+from PIL import Image
+import os
+import cv2
+
 data = scipy.io.loadmat('clothes5.mat') # 读取mat文件
 # print(data.keys())  # 查看mat文件中的所有变量
 image_vecs=data['allfeature']
@@ -10,10 +20,12 @@ image_vecs=preprocessing.normalize(image_vecs.T, norm='l2').T
 labels_mat=data['labels']
 labels_index=np.empty((labels_mat.shape[0],labels_mat.shape[1]))
 labels_index[:]=-1
+images_count=np.empty((5),dtype=int)
 for i in range(labels_mat.shape[0]):
     one_label_mat=labels_mat[i]
     one_labels_index=np.where(one_label_mat==1)[0]
     labels_index[i,:one_labels_index.shape[0]]=one_labels_index
+    images_count[i]=one_labels_index.shape[0]
 
 t=time.time()
 
@@ -25,6 +37,8 @@ lab_to_ind_dir={0:0,1:1,2:2,3:3,4:4}
 ind_to_lab_dir={0:0,1:1,2:2,3:3,4:4}
 w=54
 h=46
+
+py_file_name="clothes"
 
 start_init_number=30
 train_number=120
@@ -46,12 +60,12 @@ n_iter = 15 # number max of general iteration
 transform_n_nonzero_coefs=15
 n_features = image_vecs.shape[0]
 
-inds_of_file_path_path='inds_of_file_path_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy'
+inds_of_file_path_path='inds_of_file_path_wzz_'+py_file_name+'_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy'
 if os.path.isfile(inds_of_file_path_path):
     inds_of_file_path=np.load(inds_of_file_path_path)
     for i in classes:
         ind_of_lab=lab_to_ind_dir[i]
-        labels_of_one_class=inds_of_file_path[ind_of_lab]
+        labels_of_one_class=inds_of_file_path[ind_of_lab][:images_count[i]]
         # if i==34 or i==39:    #need to change label rank
         if i==34:    #need to change label rank
             labels_of_one_class.sort()
@@ -59,16 +73,16 @@ if os.path.isfile(inds_of_file_path_path):
         if labels_of_one_class.shape[0]<start_init_number:
             print("某个类的样本不足，程序暂停")
             pdb.set_trace()
-        inds_of_file_path[ind_of_lab]=labels_of_one_class
+        inds_of_file_path[ind_of_lab][:images_count[i]]=labels_of_one_class
 else:
-    inds_of_file_path=np.empty((n_classes,train_number),dtype=int)
+    inds_of_file_path=np.empty((n_classes,labels_index.shape[1]),dtype=int)
     for i in classes:
         ind_of_lab=lab_to_ind_dir[i]
-        labels_of_one_class=labels_index[i][:train_number]
+        labels_of_one_class=labels_index[i][:images_count[i]]
         if labels_of_one_class.shape[0]<start_init_number:
             print("某个类的样本不足，程序暂停")
             pdb.set_trace()
-        inds_of_file_path[ind_of_lab]=labels_of_one_class
+        inds_of_file_path[ind_of_lab][:images_count[i]]=labels_of_one_class
 
 """ Start the process, initialize dictionary """
 Ds=np.empty((n_classes,im_vec_len,n_atoms))
@@ -85,6 +99,7 @@ for i in range(n_classes):
 
 print("initializing classifier ... done")
 start_t=time.time()
+
 for i in range(update_times):
     for j in range(n_classes):
         j_label=ind_to_lab_dir[j]
@@ -94,18 +109,16 @@ for i in range(update_times):
         D=Ds[j]
         coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=15, transform_algorithm="omp")
         if i==0:
-        	Y_init=image_vecs[:,inds_of_file_path[i][:start_init_number]]
+            Y_init=image_vecs[:,inds_of_file_path[j][:start_init_number]]
             the_H=np.zeros((n_classes,Y_init.shape[1]),dtype=int)
             the_Q=np.zeros((n_atoms*n_classes,Y_init.shape[1]),dtype=int)
             for k in range(Y_init.shape[1]):
-                label=y_labelled[k]
-                lab_index=lab_to_ind_dir[label]
-                the_H[lab_index,k]=1
-                the_Q[n_atoms*lab_index:n_atoms*(lab_index+1),k]=1
+                the_H[j,k]=1
+                the_Q[n_atoms*j:n_atoms*(j+1),k]=1
             X_single =np.eye(D.shape[1]) #X_single的每个列向量是一个图像的稀疏表征
-            Bs[j]=np.dot(Y_init[:,start_init_number*j:start_init_number*j+start_init_number],X_single.T)
-            H_Bs[j]=np.dot(the_H[:,start_init_number*j:start_init_number*j+start_init_number],X_single.T)
-            Q_Bs[j]=np.dot(the_Q[:,start_init_number*j:start_init_number*j+start_init_number],X_single.T)
+            Bs[j]=np.dot(Y_init,X_single.T)
+            H_Bs[j]=np.dot(the_H,X_single.T)
+            Q_Bs[j]=np.dot(the_Q,X_single.T)
             Cs[j]=np.linalg.inv(np.dot(X_single,X_single.T))
             Ws[j]=np.dot(H_Bs[j],Cs[j])
             As[j]=np.dot(Q_Bs[j],Cs[j])
@@ -113,17 +126,13 @@ for i in range(update_times):
         the_H_B=H_Bs[j]
         the_Q_B=Q_Bs[j]
         the_C=Cs[j]
-        label_indexs_for_update=np.array(np.where(labels==j_label))[0][:train_number]
-        num_of_cla=train_number_of_every_cla[j]
-        if num_of_cla>start_init_number+train_number:
-            num_of_cla=start_init_number+train_number
-        new_index=[label_indexs_for_update[(i+start_init_number)%num_of_cla]]
-        im_vec=load_img(file_paths[new_index][0])
-        im_vec=im_vec/255.
+        label_indexs_for_update=inds_of_file_path[ind_of_lab][:images_count[j]][:train_number]
+        new_index=[label_indexs_for_update[(i+start_init_number)%train_number]]
+        im_vec=image_vecs[:,new_index]
         new_y=np.array(im_vec,dtype = float)
-        new_y=preprocessing.normalize(new_y.T, norm="l2").T*reg_mul
+        new_y=preprocessing.normalize(new_y.T, norm="l2").T
         new_y.reshape(n_features,1)
-        new_label=labels[new_index][0]
+        new_label=j
         new_h=np.zeros((n_classes,1))
         lab_index=lab_to_ind_dir[new_label]
         new_h[lab_index,0]=1
@@ -160,4 +169,5 @@ A_all=A_all.transpose((0,2,1))
 A_all=A_all.reshape(-1,n_classes*n_atoms).T
 np.save("A_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+"_"+str(update_times),A_all)
 print("A_all saved")
-pdb.set_trace()
+
+np.save(inds_of_file_path_path,inds_of_file_path)

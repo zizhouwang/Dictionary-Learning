@@ -224,4 +224,4 @@ print("W_all saved")
 np.save('A_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),A_all)
 print("A_all saved")
 
-np.save('inds_of_file_path_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),inds_of_file_path)
+np.save(inds_of_file_path_path,inds_of_file_path)
