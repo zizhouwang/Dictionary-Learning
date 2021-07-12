@@ -42,7 +42,7 @@ py_file_name="clothes"
 
 start_init_number=30
 train_number=120
-update_times=90
+update_times=500
 im_vec_len=w*h
 n_atoms = start_init_number
 n_neighbor = 8
@@ -57,7 +57,7 @@ seed = 0 # to save the way initialize dictionary
 n_iter_sp = 50 #number max of iteration in sparse coding
 n_iter_du = 50 # number max of iteration in dictionary update
 n_iter = 15 # number max of general iteration
-transform_n_nonzero_coefs=15
+transform_n_nonzero_coefs=30
 n_features = image_vecs.shape[0]
 
 inds_of_file_path_path='inds_of_file_path_wzz_'+py_file_name+'_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy'
@@ -101,38 +101,38 @@ print("initializing classifier ... done")
 start_t=time.time()
 
 for i in range(update_times):
-    for j in range(n_classes):
-        j_label=ind_to_lab_dir[j]
-        if j==0 and i%10==0:
+    for class_index in range(n_classes):
+        j_label=ind_to_lab_dir[class_index]
+        if class_index==0 and i%10==0:
             print(i)
             sys.stdout.flush()
-        D=Ds[j]
+        D=Ds[class_index]
         coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=15, transform_algorithm="omp")
         if i==0:
-            Y_init=image_vecs[:,inds_of_file_path[j][:start_init_number]]
+            Y_init=image_vecs[:,inds_of_file_path[class_index][:start_init_number]]
             the_H=np.zeros((n_classes,Y_init.shape[1]),dtype=int)
             the_Q=np.zeros((n_atoms*n_classes,Y_init.shape[1]),dtype=int)
             for k in range(Y_init.shape[1]):
-                the_H[j,k]=1
-                the_Q[n_atoms*j:n_atoms*(j+1),k]=1
+                the_H[class_index,k]=1
+                the_Q[n_atoms*class_index:n_atoms*(class_index+1),k]=1
             X_single =np.eye(D.shape[1]) #X_single的每个列向量是一个图像的稀疏表征
-            Bs[j]=np.dot(Y_init,X_single.T)
-            H_Bs[j]=np.dot(the_H,X_single.T)
-            Q_Bs[j]=np.dot(the_Q,X_single.T)
-            Cs[j]=np.linalg.inv(np.dot(X_single,X_single.T))
-            Ws[j]=np.dot(H_Bs[j],Cs[j])
-            As[j]=np.dot(Q_Bs[j],Cs[j])
-        the_B=Bs[j]
-        the_H_B=H_Bs[j]
-        the_Q_B=Q_Bs[j]
-        the_C=Cs[j]
-        label_indexs_for_update=inds_of_file_path[ind_of_lab][:images_count[j]][:train_number]
+            Bs[class_index]=np.dot(Y_init,X_single.T)
+            H_Bs[class_index]=np.dot(the_H,X_single.T)
+            Q_Bs[class_index]=np.dot(the_Q,X_single.T)
+            Cs[class_index]=np.linalg.inv(np.dot(X_single,X_single.T))
+            Ws[class_index]=np.dot(H_Bs[class_index],Cs[class_index])
+            As[class_index]=np.dot(Q_Bs[class_index],Cs[class_index])
+        the_B=Bs[class_index]
+        the_H_B=H_Bs[class_index]
+        the_Q_B=Q_Bs[class_index]
+        the_C=Cs[class_index]
+        label_indexs_for_update=inds_of_file_path[ind_of_lab][:images_count[class_index]][:train_number]
         new_index=[label_indexs_for_update[(i+start_init_number)%train_number]]
         im_vec=image_vecs[:,new_index]
         new_y=np.array(im_vec,dtype = float)
         new_y=preprocessing.normalize(new_y.T, norm="l2").T
         new_y.reshape(n_features,1)
-        new_label=j
+        new_label=class_index
         new_h=np.zeros((n_classes,1))
         lab_index=lab_to_ind_dir[new_label]
         new_h[lab_index,0]=1
@@ -143,15 +143,15 @@ for i in range(update_times):
         new_H_B=the_H_B+np.dot(new_h,new_x.T)
         new_Q_B=the_Q_B+np.dot(new_q,new_x.T)
         new_C=the_C-(np.matrix(the_C)*np.matrix(new_x)*np.matrix(new_x.T)*np.matrix(the_C))/(np.matrix(new_x.T)*np.matrix(the_C)*np.matrix(new_x)+1) #matrix inversion lemma(Woodbury matrix identity)
-        Bs[j]=new_B
-        H_Bs[j]=new_H_B
-        Q_Bs[j]=new_Q_B
-        Cs[j]=new_C
+        Bs[class_index]=new_B
+        H_Bs[class_index]=new_H_B
+        Q_Bs[class_index]=new_Q_B
+        Cs[class_index]=new_C
         new_D=np.dot(new_B,new_C)
         D=np.copy(new_D)
-        Ds[j]=D
-        Ws[j]=np.dot(new_H_B,new_C)
-        As[j]=np.dot(new_Q_B,new_C)
+        Ds[class_index]=D
+        Ws[class_index]=np.dot(new_H_B,new_C)
+        As[class_index]=np.dot(new_Q_B,new_C)
 end_t=time.time()
 print("train_time : "+str(end_t-start_t))
 D_all=Ds
