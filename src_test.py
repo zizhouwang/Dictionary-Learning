@@ -43,7 +43,7 @@ ind_to_lab_dir={0:0,1:1,2:2,3:3,4:4}
 w=54
 h=46
 
-py_file_name="clothes"
+py_file_name="src_clothes"
 
 start_init_number=30
 train_number=300
@@ -74,24 +74,20 @@ average_accuracy=0.
 
 Y_test=image_vecs
 test_number=Y_test.shape[1]
+Y_resi_all=np.empty((n_classes,test_number))
 X_test=np.empty((D_all.shape[1],test_number))
 coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm="omp")
-# X_test=(coder.transform(Y_test.T)).T
-X_test=transform(D_all,Y_test,transform_n_nonzero_coefs)
-# for i in range(n_classes):
-#     D=D_all[:,i*n_atoms:(i+1)*n_atoms]
-#     coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm="omp")
-#     X_test_part=(coder.transform(Y_test.T)).T
-#     X_test[i*n_atoms:(i+1)*n_atoms]=X_test_part
-the_H=np.dot(W_all,X_test)
 right_num=0
-for i in range(test_number):
-    pre=the_H[:,i].argmax()
+for class_index in range(n_classes):
+    D_part=D_all[:,class_index*n_atoms:(class_index+1)*n_atoms]
+    coder = SparseCoder(dictionary=D_part.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm="omp")
+    X_test=(coder.transform(Y_test.T)).T
+    Y_pre=np.dot(D_part,X_test)
+    Y_resi_abs=abs(Y_test-Y_pre)
+    Y_resi_sum=np.sum(Y_resi_abs,axis=0)
+    Y_resi_all[class_index]=Y_resi_sum
+for y_test_index in range(test_number):
+    pre=Y_resi_all[:,y_test_index].argmin()
     if labels_mat[pre,i]==1:
         right_num=right_num+1
-    else:
-        pass
-        # print(the_H[:,i])
-        # print(labels_mat[:,i])
-        # pdb.set_trace()
 print('accuracy : '+str(right_num*1./test_number))
