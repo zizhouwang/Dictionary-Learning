@@ -403,7 +403,8 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
         coefs = np.empty_like(L)
 
     start_change=15 #for ethnic
-    start_change=10 #for clothes origin:62.87% angle:65.21%
+    # start_change=10 #for clothes origin:62.87% angle:65.21%
+    # YaleB train time (avg. per iteration 10.77s)
     while True:
         # lam = np.argmax(np.abs(Xy))
         lam=None
