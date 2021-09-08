@@ -5,6 +5,7 @@ import numpy as np
 from SSDL_GU import *
 from sklearn.decomposition import SparseCoder
 from numpy.linalg import norm
+from numpy import linalg as LA
 import sys
 from sklearn import preprocessing
 from sklearn.neighbors import NearestNeighbors
@@ -24,6 +25,26 @@ class Params:
 # params.xmu0=0.05
 # params.mu_mode=[-1]
 # pdb.set_trace()
+
+def Find_K_Max_Eigen(Matrix,Eigen_NUM):
+
+    NN,NN=Matrix.shape
+    V,S=LA.eig(Matrix) #Note this is equivalent to; [V,S]=eig(St,SL); also equivalent to [V,S]=eig(Sn,St); %
+
+    S=np.diag(S)
+    index=S.argsort()
+    S=S.sort()
+
+    Eigen_Vector=zeros((NN,Eigen_NUM));
+    Eigen_Value=zeros(Eigen_NUM);
+
+    p=NN
+    for t in Eigen_NUM
+        Eigen_Vector[:,t]=V[:,index[p]]
+        Eigen_Value[t]=S[p]
+        p=p-1
+    return Eigen_Vector,Eigen_Value
+
 def Eigenface_f(Train_SET,Eigen_NUM):
     NN,Train_NUM=Train_SET.shape
     if NN<=Train_NUM:

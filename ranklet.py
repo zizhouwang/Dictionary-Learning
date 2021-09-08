@@ -13,6 +13,10 @@ from PIL import Image
 import math
 import os
 import cv2
+import csv
+import codecs
+import json
+import matplotlib.pyplot as plt
 
 def Cal_R(rank_part):
     wid,hei=rank_part.shape
@@ -24,8 +28,8 @@ def Cal_R(rank_part):
 
 def Ranklet_Transform(img):
     wid,hei=img.shape
-    rank_help=np.zeros(256,dtype=int)
-    rank=np.empty((wid,hei),dtype=int)
+    rank_help=np.zeros(256,dtype='int64')
+    rank=np.empty((wid,hei),dtype='int64')
     for i in range(wid):
         for j in range(hei):
             rank_help[img[i][j]]+=1
@@ -68,10 +72,63 @@ def Extract_Feature(img):
     feature_part[6],feature_part[7],feature_part[8]=Cal_Feature(Rds)
     return feature_part
 
-im=Image.open('./0a371857f68631e2b63043179a11777d.jpg')
-img=np.array(im)
-img=img.transpose((1,0,2))
-feature=np.empty(27)
-for i in range(3):
-    feature[i*9:(i+1)*9]=Extract_Feature(img[:,:,i])
-pdb.set_trace()
+def Deal_Img(path):
+    im=Image.open(path)
+    img=np.array(im)
+    img=img.transpose((1,0,2))
+    feature=np.empty(27)
+    for i in range(3):
+        img_one_channel=cv2.resize(img[:,:,i],(400,400),interpolation=cv2.INTER_LINEAR)
+        feature[i*9:(i+1)*9]=Extract_Feature(img_one_channel)
+    return feature
+
+def Create_Features():
+    dir_path='C:/Users/zxzas/Desktop/Dictionary-Learning/subimageset/'
+    for root, dirs, files in os.walk(dir_path, topdown=False):
+        for name in files:
+            path=os.path.join(root, name)
+            # feature_str=json.dumps(Deal_Img(path).tolist())
+            feature=Deal_Img(path).tolist()
+            saved_str=json.dumps({'path':root+'/'+name,'feature':feature})
+            with open('C:/Users/zxzas/Desktop/Dictionary-Learning/subimageset_feature/'+name[:-4]+'.txt','w') as f:
+                f.write(saved_str)
+            print(name)
+            sys.stdout.flush()
+
+def Retrieval(img_path):
+    feature=Deal_Img(img_path)
+    res={}
+    dir_path='C:/Users/zxzas/Desktop/Dictionary-Learning/subimageset/'
+    feature_dir_path='C:/Users/zxzas/Desktop/Dictionary-Learning/subimageset_feature/'
+    for root, dirs, files in os.walk(feature_dir_path, topdown=False):
+        for name in files:
+            path=os.path.join(root, name)
+            with open(path,"r") as f:
+                saved_str=json.loads(f.read())
+                path_saved=saved_str['path']
+                feature_saved = saved_str['feature']
+                diff=(abs(feature-feature_saved)).sum()
+                res[diff]=path_saved
+    diffs=list(res.keys())
+    diffs.sort()
+    diffs=diffs[:10]
+    N=2
+    M=5
+    img = plt.imread(img_path)
+    plt.subplot(N,M,2+1)
+    plt.imshow(img)
+    plt.xticks([])
+    plt.yticks([])
+    for i in range(N*M):
+        if i<5:
+            continue
+        print(res[diffs[i-5]])
+        sys.stdout.flush()
+        img = plt.imread(res[diffs[i-5]])
+        plt.subplot(N,M,i+1)
+        plt.imshow(img)
+        plt.xticks([])
+        plt.yticks([])
+    plt.show()
+# Create_Features()
+Retrieval('3702122180000300000029-A-0001.jpg')
