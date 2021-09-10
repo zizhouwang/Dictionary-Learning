@@ -47,6 +47,7 @@ py_file_name="clothes"
 
 start_init_number=30
 train_number=300
+update_times=100
 im_vec_len=w*h
 n_atoms = start_init_number
 n_neighbor = 8
@@ -67,8 +68,8 @@ n_features = image_vecs.shape[0]
 # inds_of_file_path_path='inds_of_file_path_wzz_'+py_file_name+'_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy'
 # inds_of_file_path=np.load(inds_of_file_path_path)
 
-D_all=np.load("D_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+"_"+".npy")
-W_all=np.load("W_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+"_"+".npy")
+D_all=np.load("D_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+".npy")
+W_all=np.load("W_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+".npy")
 
 average_accuracy=0.
 
@@ -76,8 +77,8 @@ Y_test=image_vecs
 test_number=Y_test.shape[1]
 X_test=np.empty((D_all.shape[1],test_number))
 coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm="omp")
-# X_test=(coder.transform(Y_test.T)).T
-X_test=transform(D_all,Y_test,transform_n_nonzero_coefs)
+X_test=(coder.transform(Y_test.T)).T
+# X_test=transform(D_all,Y_test,transform_n_nonzero_coefs)
 # for i in range(n_classes):
 #     D=D_all[:,i*n_atoms:(i+1)*n_atoms]
 #     coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm="omp")

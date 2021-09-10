@@ -5,22 +5,28 @@ import numpy as np
 from SSDL_GU import *
 from sklearn.decomposition import SparseCoder
 from numpy.linalg import norm
+from numpy import linalg as LA
 import sys
 from sklearn import preprocessing
 from sklearn.neighbors import NearestNeighbors
 from mnist import MNIST
 from PIL import Image
+import math
 import os
 import cv2
+import copy
+from learning_incoherent_dictionary import *
+from numpy import random
 
 # data = scipy.io.loadmat('clothes5.mat') # 读取mat文件
 data = scipy.io.loadmat('T4.mat') # 读取mat文件
 # print(data.keys())  # 查看mat文件中的所有变量
 image_vecs=data['train_data']
-image_vecs=preprocessing.normalize(image_vecs.T, norm='l2').T
-image_vecs=norm_Ys(image_vecs)
 labels_mat=data['train_Annotation']
 labels_mat=labels_mat*2-1
+change_num=1e-7
+image_vecs=preprocessing.normalize(image_vecs.T, norm='l2').T
+image_vecs=norm_Ys(image_vecs)
 labels_index=np.empty((labels_mat.shape[0],labels_mat.shape[1]))
 labels_index[:]=-1
 images_count=np.empty((5),dtype=int)
@@ -29,7 +35,6 @@ for i in range(labels_mat.shape[0]):
     one_labels_index=np.where(one_label_mat==1)[0]
     labels_index[i,:one_labels_index.shape[0]]=one_labels_index
     images_count[i]=one_labels_index.shape[0]
-
 t=time.time()
 
 np.random.seed(int(t)%100)
@@ -45,9 +50,9 @@ py_file_name="clothes"
 
 start_init_number=30
 train_number=300
-update_times=400
+update_times=100
 im_vec_len=w*h
-n_atoms = start_init_number
+n_atoms = start_init_number*1
 n_neighbor = 8
 lamda = 0.5
 beta = 1.
@@ -93,8 +98,10 @@ Bs=np.empty((n_classes,im_vec_len,start_init_number))
 H_Bs=np.empty((n_classes,n_classes,start_init_number))
 Q_Bs=np.empty((n_classes,n_atoms*n_classes,start_init_number))
 Cs=np.empty((n_classes,start_init_number,start_init_number))
+D=np.empty((im_vec_len,n_atoms))
 for class_index in range(n_classes):
-    D = image_vecs[:,inds_of_file_path[class_index][:start_init_number]]
+    D[:,:start_init_number] = image_vecs[:,inds_of_file_path[class_index][:start_init_number]]
+    # D=random.random(size=(D.shape[0],D.shape[1]))
     D = norm_cols_plus_petit_1(D,c)
     Ds[class_index]=np.copy(D)
 
@@ -159,21 +166,26 @@ for i in range(update_times):
         As[class_index]=np.dot(new_Q_B,new_C)
 end_t=time.time()
 print("train_time : "+str(end_t-start_t))
+sys.stdout.flush()
 D_all=Ds
 D_all=D_all.transpose((0,2,1))
 D_all=D_all.reshape(-1,im_vec_len).T
 D_all=preprocessing.normalize(D_all.T, norm='l2').T
-np.save("D_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+"_",D_all)
+coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm="omp")
+the_X=(coder.transform(image_vecs.T)).T
+D_all=incoherent(D_all,image_vecs,the_X,100)
+D_all=preprocessing.normalize(D_all.T, norm='l2').T
+np.save("D_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times),D_all)
 print("D_all saved")
 W_all=Ws
 W_all=W_all.transpose((0,2,1))
 W_all=W_all.reshape(-1,n_classes).T
-np.save("W_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+"_",W_all)
+np.save("W_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times),W_all)
 print("W_all saved")
 A_all=As
 A_all=A_all.transpose((0,2,1))
 A_all=A_all.reshape(-1,n_classes*n_atoms).T
-np.save("A_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+"_",A_all)
+np.save("A_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times),A_all)
 print("A_all saved")
 
 np.save(inds_of_file_path_path,inds_of_file_path)
