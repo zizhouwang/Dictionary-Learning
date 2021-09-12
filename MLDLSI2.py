@@ -18,6 +18,7 @@ from scipy.spatial.distance import pdist, squareform
 import copy
 import scipy.io as scio
 import random
+from numpy.matlib import repmat
 
 def ModelEnergy2(X,D,A,params):
     if params.reg_mode==1:
@@ -262,4 +263,40 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                         params.discard_unused_atoms = params.discard_unused_atoms / 10
                     aux=np.arange(Xb.shape[1])
                     random.shuffle(aux)
-                    
+                    Dc[:,dead_atoms[:aux.shape[0]]]=preprocessing.normalize(Xb[:,aux].T, norm='l2').T
+                    Dusage[c][dead_atoms]=Nc/2.
+                    if dead_atoms.shape[0]>0:
+                        print('reset '+str(dead_atoms.shape[0]+' atoms:'))
+                        #???原版本这里一堆输出 别的啥也没有
+                dD[c]=Dc-D[c]
+                dDn[c]=LA.norm(dD[c][:])
+                D[c]=Dc
+                mc=abs(Dc.T@Dc)
+                mc=mc-np.diag(np.diag(mc))
+                mc=mc.reshape(-1,1)
+                max_coherence[r,c]=mc.max()
+                mean_coherence[r,c]=np.mean(mc,axis=0)
+            else:
+                l1_energy[r,c]=l1_energy[r-1,c]
+                cost[r,c]=cost[r-1,c]
+                max_coherence[r,c]=max_coherence[r-1,c]
+                mean_coherence[r,c]=mean_coherence[r-1,c]
+            xc[c]=abs(D2_weight.T@Dc)
+            max_cross_coherence[r,c]=np.mean(xc[c].reshape[-1,1])
+            cost[r,c]=l1_energy[r,c]
+            if params.mu0>0:
+                mu=params.mu0/(K[c]*K[c])
+                Dc_gram=Dc.T@Dc
+                Dc_gram_2=Dc_gram*Dc_gram
+                cost[r,c]cost[r,c]+mu*np.sum(np.sum(Dc_gram_2,axis=0))
+            if params.xmu0>0:
+                xc_2=xc[c]*xc[c]
+                cost[r,c]=cost[r,c]+xmu*np.sum(np.sum(xc_2,axis=0))
+            if r>1:
+                cost_dif=abs(cost(r-1,c)-cost(r,c))/cost[0,c]#原版本说这里是否应修改
+                if cost_dif<params.min_change:
+                    finished[c]=finished[c]+1
+                else:
+                    finished[c]=0
+        #save('xin','Uk','D','AAt','XAt','Dusage','xc','mean_coherence','max_coherence','mean_cross_coherence','max_cross_coherence','finished','r','l1_energy','new_energy','acciter','cost');
+        #保存为xin.mat

@@ -14,6 +14,8 @@ from PIL import Image
 import math
 import os
 import cv2
+import random
+from numpy.matlib import repmat
 
 class Params:
     pass
