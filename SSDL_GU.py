@@ -157,7 +157,7 @@ def train(
         new_y=np.array(im_vec,dtype = float)
         new_y=preprocessing.normalize(new_y.T, norm='l2').T
         new_y=norm_Ys(new_y)
-        new_y.reshape(n_features,1)
+        new_y=new_y.reshape(n_features,1)
         new_h=np.zeros((n_classes,1))
         new_h[lab_index,0]=1
         new_q=np.zeros((n_atoms*n_classes,1))

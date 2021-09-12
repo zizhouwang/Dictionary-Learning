@@ -2,6 +2,7 @@ import time
 import pdb
 import numpy as np
 from SSDL_GU import *
+from li2nsvm_multiclass_lbfgs import *
 from sklearn.decomposition import SparseCoder
 from numpy.linalg import norm
 from numpy import linalg as LA
@@ -16,6 +17,35 @@ import cv2
 from scipy.spatial.distance import pdist, squareform
 import copy
 import scipy.io as scio
+import random
+
+def ModelEnergy2(X,D,A,params):
+    if params.reg_mode==1:
+        if params.reg_type=="l1":
+            pass
+            print("error function ModelEnergy2 params.reg_mode 1")
+            #懒得写了
+    elif params.reg_mode==0:
+        print("error function ModelEnergy2 params.reg_mode 0")
+        pass
+    elif params.reg_mode==2:
+        D.dtype="float"
+        E=X-D@A
+        E=LA.norm(E)
+        E=E*E*0.5
+        E_within=A-repmat(np.mean(A,axis=1),1,A.shape[1])
+        E_within=LA.norm(E_within)
+        E_within=E_within*E_within
+        E_within=E_within*params.lambda2*0.5
+        E=E+E_within
+        if params.reg_type=="l1":
+            R=E+params.the_lambda*np.sum(abs(A[:]))
+            pass
+        else:
+            print("error function ModelEnergy2 params.reg_type!=l1")
+    else:
+        print("error function ModelEnergy2 params.reg_mode")
+    return R
 
 def GetPrefix(params):
     path = 'C:/EMLDLSI/model/'
@@ -77,3 +107,159 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
     params.D0=[]
     scio.savemat(prefix+'-params.mat', {'params':params})
     params=params2
+
+    DataNum=np.zeros(NC)
+    X=np.empty(NC,dtype=object)
+    for i in range(NC):
+        X[i]=Xb[:,labelsb[i,:]==1]
+        DataNum[i]=X.shape[1]
+        DataXb=[DataXb,X[i]]
+    Uinit=np.zeros((DataXb.shape[0],NC))
+    binit=np.zeros(NC)
+    labelsb = labelsb*2-1
+    NumLabels=np.sum(np.sum(labelsb,axis=0).T)
+    A1_sum=np.ones((30,NumLabels))
+    A1_ini=np.ones((30,NumLabels))
+    Uk = Uinit
+    bk = binit
+    lambda1  = 2e-3
+    lambda2 = 0.006
+    theta      =  8
+    tau = 1/theta
+
+    y=np.zeros(NumLabels)
+    for i in range(NC):
+        num=0
+        if i!=0:
+            for k in range(i-1):
+                num=num+DataNum(k)
+        for j in range(DataNum[i]):
+            y[num]=i
+            num+=1
+    class_list=np.unique(y)
+    class_idx=np.zeros((NumLabels,1))
+    class_space=1
+    Y=np.zeros((NumLabels,NC))
+    for i in range(NumLabels):
+        for j in range(class_space):
+            if y[i]==class_list[j]:
+                class_idx[i]=j
+        if class_idx[i]==0:
+            class_space=class_space+1
+            class_idx[i]=class_space
+        Y[i,class_idx[i]]=1
+    Y_label=np.sign(Y-0.5)
+    for r in range(params.max_iter):
+        dD=np.empty(NC,dtype=object)
+        print("r="+str(r)+"\n")
+        find=np.arange(finished.shape[0])[finished<3]
+        if find.shape[0]==0:
+            if params.mu_mode[0]<0 and (params.mu0>0 or params.xmu0>0):
+                print("** Start adding incoherence now.")
+                print("Iteration: "+str(r))
+                params.mu_mode[0]=r
+                if len(params.mu_mode)==2:
+                    params.mu_mode[1]=params.mu_mode[1]+params.mu_mode[0]
+                finished[:]=0
+            else:
+                break
+
+        Uk, bk, class_name = li2nsvm_multiclass_lbfgs(A1_sum.T,y, tau)
+        temp_z=None
+        for c in range(NC):
+            Dc=D[c]
+            D2=np.zeros((M,(np.sum(K)-K[c])))
+            D2_weight=np.zeros((M,(np.sum(K)-K[c])))
+            for c2 in range(c-1):
+                D2[:,np.sum(K[:c2])-K[c]+1:np.sum(K[:c2+1])]=D[c2]
+                D2_weight[:,np.sum(K[:c2])+1:np.sum(K[:c2+1])]=D[c2]*1.*labelCorr[c,c2]
+            for c2 in range(c,NC,1):
+                D2[:,np.sum(K[:c2])-K[c]+1:np.sum(K[:c2+1])-K[c]]=D[c2]
+                D2_weight[:,np.sum(K[:c2])-K[c]+1:np.sum(K[:c2+1])-K[c]]=D[c2]*1.*labelCorr[c,c2]
+            if finished[c]<3 or params.xmu0>0:
+                Xbc=Xb[:,labelsb[labelname[c],:]==1]
+                Nc=Xbc.shape[1]
+                old_Nc=params.remember_factor*accumulated_N[c]
+                if r>1:
+                    l1_energy[r,c]=l1_energy[r-1,c]*old_Nc
+                else:
+                    l1_energy[r,c]=0
+                accumulated_N[c]=old_Nc+Nc
+                acciter[r,c]=accumulated_N[c]
+                mu=params.mu0*accumulated_N[c]/(K[c]*K[c])
+                xmu=params.xmu0*accumulated_N[c]/((np.sum(K)-K[c])*K[c])
+                if params.mu_mode[0]>=0:
+                    if len(params.mu_mode)==1:
+                        fac=(r>params.mu_mode[0])
+                    else:
+                        fac=min(1,max(0,(r-params.mu_mode[0])/(params.mu_mode[1]-params.mu_mode[0]))):
+                    fac2=1
+                else:
+                    fac=0
+                    fac2=0
+                mu=fac*mu
+                xmu=fac*xmu
+                if r==1:
+                    A1[c]=np.ones((Dc.shape[1],Xbc.shape[1]))
+                P[c]=LA.inv(np.dot(D[c].T,D[c])+params.model.lambda1*np.eye(D[c].T.shape[0]))
+                if r!=1:
+                    num=0
+                    if c!=1:
+                        for k in range(c-1):
+                            num=num+DataNum[k]
+                    for j in range(DataNum[c]):
+                        Y_labelki=np.dot(A1_sum[:,num].T,Uk)+bk
+                        found_arr=Y_labelki*Y_label[num,:]
+                        loss_idx=np.arange(found_arr.shape[0])[found_arr<3]
+                        if loss_idx.shape[0]==0:
+                            A1_sum[:,num]=np.dot(np.dot(P[c],D[c].T),DataXb[:,num])
+                        else:
+                            Yi_idx=Y_label[num,loss_idx]
+                            Uk_idx=Uk[:,loss_idx]
+                            bk_idx=bk[loss_idx]
+                            ski=np.dot(D[c].T,DataXb[:,num])+2*lambda2*theta*(np.dot(Uk_idx,Yi_idx.T)-np.dot(Uk_idx,bk_idx.T))
+                            Tki=LA.inv(np.eye(Uk_idx.shape[1])+2*lambda2*theta*np.dot(np.dot(Uk_idx.T,P[c]),Uk_idx))
+                            A1_sum[:,num]=(P[c]-2*lambda2*theta*P[c]@Uk_idx@Tki@Uk_idx.T@P[c])@ski
+                        num+=1
+                    temp_z=copy.deepcopy(temp_z)
+                    num=0
+                    if c!=1:
+                        for k in c-1:
+                            num=num+DataNum[k]
+                    for j in DataNum[c]:
+                        A1[c][:,j]=A1_sum[:,num]
+                        num+=1
+                    A1_mean[c]=np.mean(A1[c],axis=1)
+                    temp_z=copy.deepcopy(A1_sum)
+                else:
+                    A1[c]=P[c]@D[c].T@X[c]
+                    temp_z=np.hstack((temp_z,A1[c]))
+                    A1_mean[c]=np.mean(A1[c],axis=1)
+                new_energy[r,c]=ModelEnergy2(Xbc,D[c],A1[c],params.model)
+                l1_energy[r,c]=(l1_energy[r,c]+new_energy[r,c])/accumulated_N[c]
+                XAt[c]=params.remember_factor@XAt[c]+Xbc@A1[c].T
+                AAt[c]=params.remember_factor@AAt[c]+A1[c]@A1[c].T
+                batch_usage=np.sum(A1[c]!=0,axis=1)
+                Dusage[c]=params.remember_factor@Dusage[c]+batch_usage
+                Dmean[c]=params.remember_factor@Dmean[c]+(np.sum(A1[c],axis=1).T)/batch_usage
+                Dvar[c]=params.remember_factor@Dvar[c]+(np.sum(A1[c]*A1[c],axis=1).T)/batch_usage
+                params.dict_update.mu       = mu;
+                params.dict_update.xmu      = xmu;
+                params.dict_update.positive = params.positive;
+                params.dict_update.c        = c;
+                params.dict_update.NC       = NC;
+                Dc,stuck=DictUpdate(D[c],AAt[c],XAt[c],D2_weight,params.dict_update)
+                if np.sum(Dc*Dc,axis=0).max()>(1+sqrt(eps)):
+                    print("error np.sum(Dc*Dc,axis=0).max()>(1+sqrt(eps))")
+                    pdb.set_trace()
+                if params.discard_unused_atoms>0:
+                    kt_usage[c]=(Dusage[c]+0.5)/(accumulated_N[c]+1)
+                    thres=params.discard_unused_atoms
+                    found_arr=kt_usage[c]
+                    dead_atoms=np.arange(found_arr.shape[0])[found_arr<thres]
+                    if dead_atoms.shape[0]>=Dc.shape[1]:
+                        print('All atoms were discarded! Consider reducing threshold.')
+                        params.discard_unused_atoms = params.discard_unused_atoms / 10
+                    aux=np.arange(Xb.shape[1])
+                    random.shuffle(aux)
+                    

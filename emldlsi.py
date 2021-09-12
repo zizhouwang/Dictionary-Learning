@@ -25,6 +25,26 @@ class Params:
 # params.xmu0=0.05
 # params.mu_mode=[-1]
 # pdb.set_trace()
+# for i in range(10,1,-1):
+#     print(i)
+pdb.set_trace()
+
+def DefaultModelParams():
+    params=Params()
+    params.reg_mode = 2; 
+    params.the_lambda = 0.01;
+    params.theta = 30.0;
+    params.kappa = 2.5;
+    params.beta = 0.05;
+    params.reg_type = 'l1';
+    params.lambda_min = 10;
+    params.lambda_max = 150;
+    params.lla_iter = 5;
+    params.L = 0; 
+    params.positive = false;
+    params.project = false;
+    params.l2err = 8^2*1.15^2*(1/255)^2;
+    return params
 
 def Find_K_Max_Eigen(Matrix,Eigen_NUM):
 
@@ -39,7 +59,7 @@ def Find_K_Max_Eigen(Matrix,Eigen_NUM):
     Eigen_Value=zeros(Eigen_NUM);
 
     p=NN
-    for t in Eigen_NUM
+    for t in Eigen_NUM:
         Eigen_Vector[:,t]=V[:,index[p]]
         Eigen_Value[t]=S[p]
         p=p-1
@@ -49,14 +69,14 @@ def Eigenface_f(Train_SET,Eigen_NUM):
     NN,Train_NUM=Train_SET.shape
     if NN<=Train_NUM:
         Mean_Image=np.mean(Train_SET,axis=1)
-        Train_SET=Train_SET-np.dot(Mean_Image,np.ones(1,Train_NUM))
+        Train_SET=Train_SET-np.dot(Mean_Image,np.ones((1,Train_NUM)))
         R=np.dot(Train_SET,Train_SET.T)/(Train_NUM-1)
         V,S=Find_K_Max_Eigen(R,Eigen_NUM)
         disc_value=S
         disc_set=V
     else:
         Mean_Image=np.mean(Train_SET,axis=1)
-        Train_SET=Train_SET-np.dot(Mean_Image,np.ones(1,Train_NUM))
+        Train_SET=Train_SET-np.dot(Mean_Image,np.ones((1,Train_NUM)))
         R=np.dot(Train_SET.T,Train_SET)/(Train_NUM-1)
         V,S=Find_K_Max_Eigen(R,Eigen_NUM)
         disc_value=S
@@ -118,7 +138,7 @@ for m in range(xmu.shape[0]):
             the_dict=Dict_Ini(cdat,atomNum[i],wayInit)
         D0[i]=the_dict
         D0_reg[i]=preprocessing.normalize(the_dict.T, norm='l2').T
-    params=Params()
+    params=DefaultModelParams()
     params.model=Params()
     params.model.lambda2=0.003
     params.model.lambda1=0.04
