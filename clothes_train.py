@@ -18,7 +18,7 @@ import copy
 from learning_incoherent_dictionary import *
 from numpy import random
 
-for a2 in range(1):
+for a2 in range(100):
 
     # data = scipy.io.loadmat('clothes5.mat') # 读取mat文件
     data = scipy.io.loadmat('T4.mat') # 读取mat文件
@@ -111,11 +111,12 @@ for a2 in range(1):
     start_t=time.time()
 
     a1=100
-    a2=80
+    # a2=80
     for i in range(update_times):
         if i%a1==a2:
             #无 0.6254180602006689
             #80 0.6454849498327759
+            #a2 10 start_change 0.6622073578595318
             D_all=Ds
             D_all=D_all.transpose((0,2,1))
             D_all=D_all.reshape(-1,im_vec_len).T
@@ -157,7 +158,7 @@ for a2 in range(1):
             im_vec=image_vecs[:,new_index]
             new_y=np.array(im_vec,dtype = float)
             new_y=preprocessing.normalize(new_y.T, norm="l2").T
-            new_y.reshape(n_features,1)
+            new_y=new_y.reshape(n_features,1)
             new_label=class_index
             new_h=np.zeros((n_classes,1))
             lab_index=lab_to_ind_dir[new_label]

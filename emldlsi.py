@@ -3,6 +3,7 @@ import time
 import pdb
 import numpy as np
 from SSDL_GU import *
+from LocalClassifier import *
 from sklearn.decomposition import SparseCoder
 from numpy.linalg import norm
 from numpy import linalg as LA

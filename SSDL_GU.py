@@ -100,19 +100,19 @@ def initialize_D(Y_all, n_atoms, y,n_labelled,seed=0):
 def initialize_single_D(Y_all, n_atoms, y,n_labelled,seed=0,D_index=0):
     return np.copy(Y_all[:,n_atoms*D_index:n_atoms*D_index+n_atoms])
 
-def transform(D_all,Y_s,n_nonzero_coefs):
+def transform(D_all,Y_s,n_nonzero_coefs,start_change=None):
     X_res=np.empty((D_all.shape[1],Y_s.shape[1]))
     for i in range(Y_s.shape[1]):
-        X_one=_transform(D_all,Y_s[:,i],n_nonzero_coefs)
+        X_one=_transform(D_all,Y_s[:,i],n_nonzero_coefs,start_change)
         X_res[:,i]=X_one
     return X_res
 
-def _transform(D_all,the_y,n_nonzero_coefs):
+def _transform(D_all,the_y,n_nonzero_coefs,start_change):
     out = gram_omp(
         D_all, the_y, n_nonzero_coefs,
         None, None,
         copy_Gram=False, copy_Xy=False,
-        return_path=False)
+        return_path=False, start_change=start_change)
     x, idx, n_iter = out
     X_one=np.zeros(D_all.shape[1])
     X_one[idx] = x
@@ -317,7 +317,7 @@ def _gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
         return gamma, indices[:n_active], n_active
 
 def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
-              copy_Gram=True, copy_Xy=True, return_path=False):
+              copy_Gram=True, copy_Xy=True, return_path=False, start_change=None):
     """Orthogonal Matching Pursuit step on a precomputed Gram matrix.
 
     This function uses the Cholesky decomposition method.
@@ -401,8 +401,8 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
     idx_used=np.zeros(D_all.shape[1],dtype=int)
     if return_path:
         coefs = np.empty_like(L)
-
-    start_change=15 #for ethnic
+    if start_change==None:
+        start_change=17 #for ethnic
     # start_change=10 #for clothes origin:62.87% angle:65.21%
     # YaleB train time (avg. per iteration 10.77s)
     while True:
