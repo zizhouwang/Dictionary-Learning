@@ -114,8 +114,7 @@ for a2 in range(100):
     # a2=80
     for i in range(update_times):
         if i%a1==a2:
-            #无 0.6254180602006689
-            #80 0.6454849498327759
+            #无 0.6521
             #a2 10 start_change 0.6622073578595318
             D_all=Ds
             D_all=D_all.transpose((0,2,1))
