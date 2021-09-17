@@ -4,6 +4,8 @@ import pdb
 import numpy as np
 from SSDL_GU import *
 from LocalClassifier import *
+from DictUpdate import *
+from MLDLSI2 import *
 from sklearn.decomposition import SparseCoder
 from numpy.linalg import norm
 from numpy import linalg as LA
@@ -17,6 +19,8 @@ import os
 import cv2
 import random
 from numpy.matlib import repmat
+import copy
+import scipy.io as scio
 
 class Params:
     pass
@@ -30,7 +34,6 @@ class Params:
 # pdb.set_trace()
 # for i in range(10,1,-1):
 #     print(i)
-pdb.set_trace()
 
 def DefaultModelParams():
     params=Params()
@@ -44,25 +47,25 @@ def DefaultModelParams():
     params.lambda_max = 150;
     params.lla_iter = 5;
     params.L = 0; 
-    params.positive = false;
-    params.project = false;
-    params.l2err = 8^2*1.15^2*(1/255)^2;
+    params.positive = False;
+    params.project = False;
+    params.l2err = (8**2)*(1.15**2)*((1/255)**2);
     return params
 
 def Find_K_Max_Eigen(Matrix,Eigen_NUM):
 
     NN,NN=Matrix.shape
-    V,S=LA.eig(Matrix) #Note this is equivalent to; [V,S]=eig(St,SL); also equivalent to [V,S]=eig(Sn,St); %
+    S,V=LA.eig(Matrix) #Note this is equivalent to; [V,S]=eig(St,SL); also equivalent to [V,S]=eig(Sn,St); %
 
-    S=np.diag(S)
+    # S=copy.deepcopy(np.diag(S))
     index=S.argsort()
-    S=S.sort()
+    S.sort()
 
-    Eigen_Vector=zeros((NN,Eigen_NUM));
-    Eigen_Value=zeros(Eigen_NUM);
+    Eigen_Vector=np.zeros((NN,Eigen_NUM));
+    Eigen_Value=np.zeros(Eigen_NUM);
 
-    p=NN
-    for t in Eigen_NUM:
+    p=NN-1
+    for t in range(Eigen_NUM):
         Eigen_Vector[:,t]=V[:,index[p]]
         Eigen_Value[t]=S[p]
         p=p-1
@@ -72,6 +75,7 @@ def Eigenface_f(Train_SET,Eigen_NUM):
     NN,Train_NUM=Train_SET.shape
     if NN<=Train_NUM:
         Mean_Image=np.mean(Train_SET,axis=1)
+        Mean_Image=Mean_Image.reshape((-1,1))
         Train_SET=Train_SET-np.dot(Mean_Image,np.ones((1,Train_NUM)))
         R=np.dot(Train_SET,Train_SET.T)/(Train_NUM-1)
         V,S=Find_K_Max_Eigen(R,Eigen_NUM)
@@ -79,6 +83,7 @@ def Eigenface_f(Train_SET,Eigen_NUM):
         disc_set=V
     else:
         Mean_Image=np.mean(Train_SET,axis=1)
+        Mean_Image=Mean_Image.reshape((-1,1))
         Train_SET=Train_SET-np.dot(Mean_Image,np.ones((1,Train_NUM)))
         R=np.dot(Train_SET.T,Train_SET)/(Train_NUM-1)
         V,S=Find_K_Max_Eigen(R,Eigen_NUM)
@@ -86,7 +91,8 @@ def Eigenface_f(Train_SET,Eigen_NUM):
         disc_set=np.zeros((NN,Eigen_NUM))
         Train_SET=Train_SET/math.sqrt(Train_NUM-1)
         for k in range(Eigen_NUM):
-            disc_set[:,k]=(1./math.sqrt(disc_value[k]))*Train_SET*V[:,k]
+            disc_set[:,k]=(1./math.sqrt(disc_value[k]))*Train_SET@V[:,k]
+    return disc_set,disc_value,Mean_Image
 
 def Dict_Ini(data,nCol,wayInit):
     m=data.shape[0]
@@ -100,6 +106,7 @@ def Dict_Ini(data,nCol,wayInit):
     else:
         print("wayInit_error")
         exit()
+    return D
 
 # data = scipy.io.loadmat('clothes5.mat') # 读取mat文件
 data = scipy.io.loadmat('T4.mat') # 读取mat文件
@@ -140,7 +147,11 @@ for m in range(xmu.shape[0]):
             wayInit="pca"
             the_dict=Dict_Ini(cdat,atomNum[i],wayInit)
         D0[i]=the_dict
-        D0_reg[i]=preprocessing.normalize(the_dict.T, norm='l2').T
+        the_dict=preprocessing.normalize(the_dict.T, norm='l2').T
+        # aa=abs(np.dot(the_dict.T,the_dict))
+        # for i in range(aa.shape[0]):
+        #     aa[i][i]=0
+        D0_reg[i]=the_dict
     params=DefaultModelParams()
     params.model=Params()
     params.model.lambda2=0.003

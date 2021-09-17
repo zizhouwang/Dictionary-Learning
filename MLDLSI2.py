@@ -49,8 +49,9 @@ def ModelEnergy2(X,D,A,params):
     return R
 
 def GetPrefix(params):
-    path = 'C:/EMLDLSI/model/'
+    path = 'C:/Users/zxzas/Desktop/Dictionary-Learning/model/'
     prefix = path+'model-'+time.strftime('%Y-%m-%d-%H-%M',time.localtime(time.time()))
+    return prefix
 
 
 def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
@@ -59,10 +60,10 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
     labelname=np.arange(params.training_labels.shape[0])
     labelCorr=np.ones((NC,NC))
     if params.dict_update.xcorr==1:
-        for i in NC:
-            for j in NC:
+        for i in range(NC):
+            for j in range(NC):
                 labelCorr[i,j]=pdist([params.training_labels[i,:]+0.,params.training_labels[j,:]+0.],'cosine')
-    for i in NC:
+    for i in range(NC):
         M,K[i]=params.D0[i].shape
     Xb=params.training_data
     labelsb=params.training_labels
@@ -81,23 +82,24 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
     xc=np.empty(NC,dtype=object)
     A1_mean=np.empty(NC,dtype=object)
 
-    for i in NC:
-        Dusage[i]=np.zeros(K[i])
-        Dmean[i]=np.zeros(K[i])
-        Dvar[i]=np.zeros(K[i])
-        AAt[i]=np.zeros((K[i],K[i]))
-        XAt[i]=np.zeros((M,K[i]))
-        A1_mean[i]=np.zeros((K[i],1))
-    cost=np.zeros(params.max_iter,NC)
-    l1_energy=np.zeros(params.max_iter,NC)
-    l1_energy2=np.zeros(params.max_iter,NC)
-    new_energy=np.zeros(params.max_iter,NC)
-    mean_coherence=np.zeros(params.max_iter,NC)
-    max_coherence=np.zeros(params.max_iter,NC)
-    max_cross_coherence=np.zeros(params.max_iter,NC)
-    mean_cross_coherence=np.zeros(params.max_iter,NC)
-    accumulated_N=np.zeros(1,NC)
-    acciter=np.zeros(params.max_iter,NC)
+    for i in range(NC):
+        matrix_len=int(K[i])
+        Dusage[i]=np.zeros(matrix_len)
+        Dmean[i]=np.zeros(matrix_len)
+        Dvar[i]=np.zeros(matrix_len)
+        AAt[i]=np.zeros((matrix_len,matrix_len))
+        XAt[i]=np.zeros((M,matrix_len))
+        A1_mean[i]=np.zeros((matrix_len,1))
+    cost=np.zeros((params.max_iter,NC))
+    l1_energy=np.zeros((params.max_iter,NC))
+    l1_energy2=np.zeros((params.max_iter,NC))
+    new_energy=np.zeros((params.max_iter,NC))
+    mean_coherence=np.zeros((params.max_iter,NC))
+    max_coherence=np.zeros((params.max_iter,NC))
+    max_cross_coherence=np.zeros((params.max_iter,NC))
+    mean_cross_coherence=np.zeros((params.max_iter,NC))
+    accumulated_N=np.zeros((1,NC))
+    acciter=np.zeros((params.max_iter,NC))
 
     prefix=GetPrefix(params)
     params2=copy.deepcopy(params)
@@ -111,14 +113,15 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
 
     DataNum=np.zeros(NC)
     X=np.empty(NC,dtype=object)
+    DataXb=np.empty((Xb.shape[0],0))
     for i in range(NC):
         X[i]=Xb[:,labelsb[i,:]==1]
-        DataNum[i]=X.shape[1]
-        DataXb=[DataXb,X[i]]
+        DataNum[i]=X[i].shape[1]
+        DataXb=np.hstack((DataXb,X[i]))
     Uinit=np.zeros((DataXb.shape[0],NC))
     binit=np.zeros(NC)
     labelsb = labelsb*2-1
-    NumLabels=np.sum(np.sum(labelsb,axis=0).T)
+    NumLabels=int(np.sum(np.sum(labelsb,axis=0).T))
     A1_sum=np.ones((30,NumLabels))
     A1_ini=np.ones((30,NumLabels))
     Uk = Uinit
@@ -132,23 +135,25 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
     for i in range(NC):
         num=0
         if i!=0:
-            for k in range(i-1):
-                num=num+DataNum(k)
-        for j in range(DataNum[i]):
+            for k in range(i):
+                num=num+DataNum[k]
+        for j in range(int(DataNum[i])):
+            num=int(num)
             y[num]=i
             num+=1
     class_list=np.unique(y)
     class_idx=np.zeros((NumLabels,1))
+    class_idx[:]=-1
     class_space=1
     Y=np.zeros((NumLabels,NC))
     for i in range(NumLabels):
         for j in range(class_space):
             if y[i]==class_list[j]:
                 class_idx[i]=j
-        if class_idx[i]==0:
+        if class_idx[i]==-1:
             class_space=class_space+1
-            class_idx[i]=class_space
-        Y[i,class_idx[i]]=1
+            class_idx[i]=class_space-1
+        Y[i,int(class_idx[i]-1)]=1
     Y_label=np.sign(Y-0.5)
     for r in range(params.max_iter):
         dD=np.empty(NC,dtype=object)
@@ -193,7 +198,7 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                     if len(params.mu_mode)==1:
                         fac=(r>params.mu_mode[0])
                     else:
-                        fac=min(1,max(0,(r-params.mu_mode[0])/(params.mu_mode[1]-params.mu_mode[0]))):
+                        fac=min(1,max(0,(r-params.mu_mode[0])/(params.mu_mode[1]-params.mu_mode[0])))
                     fac2=1
                 else:
                     fac=0
@@ -288,7 +293,7 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                 mu=params.mu0/(K[c]*K[c])
                 Dc_gram=Dc.T@Dc
                 Dc_gram_2=Dc_gram*Dc_gram
-                cost[r,c]cost[r,c]+mu*np.sum(np.sum(Dc_gram_2,axis=0))
+                cost[r,c]=cost[r,c]+mu*np.sum(np.sum(Dc_gram_2,axis=0))
             if params.xmu0>0:
                 xc_2=xc[c]*xc[c]
                 cost[r,c]=cost[r,c]+xmu*np.sum(np.sum(xc_2,axis=0))

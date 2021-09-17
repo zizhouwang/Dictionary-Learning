@@ -13,6 +13,8 @@ from PIL import Image
 import math
 import os
 import cv2
+import random
+from numpy.matlib import repmat
 from scipy.spatial.distance import pdist, squareform
 import copy
 import scipy.io as scio
@@ -76,7 +78,7 @@ def lineSearchWolfe(x0, f0, g0, s0, a1, amax, c1, c2, maxiter, f, X,Y,the_lambda
     while True:
         xstar=x0+ai*s0
         fi,gi=li2nsvm_grad(xstar,X,Y,the_lambda,sigma,gamma)
-        linegradi=np.dot(gi[:].T,s0[;])
+        linegradi=np.dot(gi[:].T,s0[:])
         if fi>(f0+c1*ai*linegrad0) or (fi>=fi_1 and i>1):
             if echo==True:
                 pass
@@ -214,7 +216,7 @@ def lbfgs2(x0, options,  f, sf, X, Y, the_lambda, sigma, gamma):
         if k<m:
             s[:,k]=xstar[:]+s[:,k]
             y[:,k]=gstar[:]+y[:,k]
-            rou[k+1]=1/np.dot(s(:,k+1).T*y(:,k+1))
+            rou[k+1]=1/np.dot(s[:,k+1].T*y[:,k+1])
         else:
             s[:,-1]=xstar[:]+s[:,-1]
             y[:,-1]=gstar[:]+y[:,-1]
