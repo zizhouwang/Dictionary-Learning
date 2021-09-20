@@ -25,9 +25,11 @@ def ModelEnergy2(X,D,A,params):
         if params.reg_type=="l1":
             pass
             print("error function ModelEnergy2 params.reg_mode 1")
+            pdb.set_trace()
             #懒得写了
     elif params.reg_mode==0:
         print("error function ModelEnergy2 params.reg_mode 0")
+        pdb.set_trace()
         pass
     elif params.reg_mode==2:
         D.dtype="float"
@@ -44,12 +46,15 @@ def ModelEnergy2(X,D,A,params):
             pass
         else:
             print("error function ModelEnergy2 params.reg_type!=l1")
+            pdb.set_trace()
     else:
         print("error function ModelEnergy2 params.reg_mode")
+        pdb.set_trace()
     return R
 
 def GetPrefix(params):
     path = 'C:/Users/zxzas/Desktop/Dictionary-Learning/model/'
+    path = './model/'
     prefix = path+'model-'+time.strftime('%Y-%m-%d-%H-%M',time.localtime(time.time()))
     return prefix
 
@@ -174,14 +179,14 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
         temp_z=None
         for c in range(NC):
             Dc=D[c]
-            D2=np.zeros((M,(np.sum(K)-K[c])))
-            D2_weight=np.zeros((M,(np.sum(K)-K[c])))
+            D2=np.zeros((M,int(np.sum(K)-K[c])))
+            D2_weight=np.zeros((M,int(np.sum(K)-K[c])))
             for c2 in range(c-1):
-                D2[:,np.sum(K[:c2])-K[c]+1:np.sum(K[:c2+1])]=D[c2]
-                D2_weight[:,np.sum(K[:c2])+1:np.sum(K[:c2+1])]=D[c2]*1.*labelCorr[c,c2]
-            for c2 in range(c,NC,1):
-                D2[:,np.sum(K[:c2])-K[c]+1:np.sum(K[:c2+1])-K[c]]=D[c2]
-                D2_weight[:,np.sum(K[:c2])-K[c]+1:np.sum(K[:c2+1])-K[c]]=D[c2]*1.*labelCorr[c,c2]
+                D2[:,int(np.sum(K[:c2]-K[c])):int(np.sum(K[:c2+1]))]=D[c2]
+                D2_weight[:,int(np.sum(K[:c2])):int(np.sum(K[:c2+1]))]=D[c2]*1.*labelCorr[c,c2]
+            for c2 in range(c+1,NC,1):
+                D2[:,int(np.sum(K[:c2])-K[c]):int(np.sum(K[:c2+1])-K[c])]=D[c2]
+                D2_weight[:,int(np.sum(K[:c2])-K[c]):int(np.sum(K[:c2+1])-K[c])]=D[c2]*1.*labelCorr[c,c2]
             if finished[c]<3 or params.xmu0>0:
                 Xbc=Xb[:,labelsb[labelname[c],:]==1]
                 Nc=Xbc.shape[1]

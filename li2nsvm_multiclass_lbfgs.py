@@ -100,7 +100,7 @@ def lineSearchWolfe(x0, f0, g0, s0, a1, amax, c1, c2, maxiter, f, X,Y,the_lambda
             astar=ai
             if echo==True:
                 pass
-            returnastar,xstar,fstar,gstar
+            return astar,xstar,fstar,gstar
         ai_1=ai
         fi_1=fi
         linegradi_1=linegradi
@@ -114,22 +114,24 @@ def lineSearchWolfe(x0, f0, g0, s0, a1, amax, c1, c2, maxiter, f, X,Y,the_lambda
 def oneofc(label):
     N=label.shape[0]
     class_num=0
-    class_name=None
+    class_name=np.array([])
     class_column=np.zeros((N,1))-1
     for i in range(N):
         if i==0:
             class_num=1
-            class_name=np.array([class_name,label[0]])
+            # class_name=np.array([class_name,label[0]])
+            class_name=np.hstack((class_name,np.array([label[0]])))
         for j in range(class_num):
             if label[i]==class_name[j]:
                 class_column[i]=j
         if class_column[i]==-1:
             class_num=class_num+1
-            class_name=np.array([class_name,label[i]])
-            class_column[i]=class_num
+            # class_name=np.array([class_name,label[i]])
+            class_name=np.hstack((class_name,np.array([label[i]])))
+            class_column[i]=class_num-1
     Y=np.zeros((N,class_num))
     for i in range(N):
-        Y[i,class_column[i]]=1
+        Y[i,int(class_column[i])]=1
     return Y,class_name
 
 def li2nsvm_grad(para,X,Y,the_lambda,sigma=[],gamma=[]):
@@ -142,7 +144,7 @@ def li2nsvm_grad(para,X,Y,the_lambda,sigma=[],gamma=[]):
     else:
         lambdawgamma=w*(np.array(gamma)+the_lambda)
     Ypred=np.dot(X,w)+b
-    active_idx=find(Ypred*(Y<1))
+    active_idx=np.where(Ypred*Y<1)[0]
     if len(active_idx)==0:
         dw=2*lambdawgamma
         db=0
@@ -155,10 +157,10 @@ def li2nsvm_grad(para,X,Y,the_lambda,sigma=[],gamma=[]):
         else:
             active_E=sigma[active_idx,:]*(Ypred[active_idx]-active_Y)
         dw=2*(np.dot(active_E.T,active_X).T)+2*lambdawgamma
-        db=2*np.sum(active_E,axis=1)
-    df=np.hstack((dw,db),axis=1)
+        db=2*np.sum(active_E)
+    df=np.vstack((dw,db))
     f=np.dot(active_E.T,active_E)+np.dot(w.T,lambdawgamma)
-    return f,df
+    return f[0][0],df
 
 def lbfgs2(x0, options,  f, sf, X, Y, the_lambda, sigma, gamma):
     history=Params()
@@ -172,6 +174,8 @@ def lbfgs2(x0, options,  f, sf, X, Y, the_lambda, sigma, gamma):
     f_idx,g_idx=li2nsvm_grad(x0,X,Y,the_lambda,sigma,gamma)
     if len(sf)!=0:
         #懒得写了
+        print("error 143")
+        pdb.set_trace()
         pass
     else:
         history.obj.append(f_idx)
@@ -179,6 +183,7 @@ def lbfgs2(x0, options,  f, sf, X, Y, the_lambda, sigma, gamma):
     astar=options.wolfe.a1
     k=-1
     gstar=g_idx
+    rou=[]
     while True:
         if k<m:
             howmany=k
@@ -187,19 +192,20 @@ def lbfgs2(x0, options,  f, sf, X, Y, the_lambda, sigma, gamma):
         if howmany<0:
             gamma_k=1
         else:
-            gamma_k=(1./rou(howmany))/np.sum(y[:,howmany]*y[:,howmany])
+            gamma_k=(1./rou[howmany])/np.sum(y[:,howmany]*y[:,howmany])
         q=copy.deepcopy(g_idx[:])
         for i in range(howmany,-1,-1):#从howmany倒叙循环到0
             alpha[i]=np.dot(rou[i]*s[:,i].T,q)
-            q=q-alpha[i]*y[:,i]
+            q=q-alpha[i]*y[:,i].reshape((-1,1))
         s_idx=gamma_k*q
         for i in range(howmany):
             beta=np.dot(rou[i]*y[:,i].T,s_idx)
+            pdb.set_trace()
             s_idx+=s[:,i]*(alpha(i)-beta)
         s_idx=s_idx.reshape(x0.shape)
         if k<m:
-            s[:,k]=-x_idx[:]
-            y[:,k]=-g_idx[:]
+            s[:,k+1]=-x_idx.T[0]
+            y[:,k+1]=-g_idx.T[0]
         else:
             s[:,:-2]=s[:,1:]
             y[:,:-2]=y[:,1:]
@@ -214,23 +220,28 @@ def lbfgs2(x0, options,  f, sf, X, Y, the_lambda, sigma, gamma):
                 astar=(astar+options.wolfe.amax)/2.
         astar,xstar,fstar,gstar=lineSearchWolfe(x_idx, f_idx, g_idx, -s_idx,astar, options.wolfe.amax, options.wolfe.c1,options.wolfe.c2,options.wolfe.maxiter, f,X,Y,the_lambda,sigma,gamma)
         if k<m:
-            s[:,k]=xstar[:]+s[:,k]
-            y[:,k]=gstar[:]+y[:,k]
-            rou[k+1]=1/np.dot(s[:,k+1].T*y[:,k+1])
+            s[:,k+1]=xstar.T[0]+s[:,k+1]
+            y[:,k+1]=gstar.T[0]+y[:,k+1]
+            if k+1>=len(rou):
+                rou.append(1/np.dot(s[:,k+1].reshape((1,-1)),y[:,k+1].reshape((-1,1)))[0][0])
+            else:
+                rou[k+1]=1/np.dot(s[:,k+1].reshape((1,-1)),y[:,k+1].reshape((-1,1)))[0][0]
         else:
-            s[:,-1]=xstar[:]+s[:,-1]
-            y[:,-1]=gstar[:]+y[:,-1]
-            rou[:-2]=rou[1:]
-            rou[-1]=1/np.dot(s[:,-1].T,y[:,-1])
+            s[:,-1]=xstar.T[0]+s[:,-1]
+            y[:,-1]=gstar.T[0]+y[:,-1]
+            rou[:-1]=rou[1:]
+            rou[-1]=1/np.dot(s[:,-1].reshape((1,-1)),y[:,-1].reshape((-1,1)))[0][0]
         k+=1
         if options.echo==True:
             pass
         if len(sf)!=0:
             #懒得写了
+            print("error 143")
+            pdb.set_trace()
             pass
         else:
             history.obj.append(fstar)
-        if abs(gstar[:]).max()*1./(1+abs(fstar))<=options.termination or abs((xstar[:]-x_idx[:])).max()*1./(xstar[:]+2.2204e-16)<=options.xtermination:
+        if abs(gstar[:]).max()*1./(1+abs(fstar))<=options.termination or abs((xstar[:]-x_idx[:])*1./(xstar[:]+2.2204e-16)).max()<=options.xtermination:
             if options.echo==True:
                 pass
             retval=0
@@ -255,12 +266,26 @@ def li2nsvm_lbfgs(X,Y,the_lambda,sigma=[],gamma=[]):
     N,D=X.shape
     w0=np.zeros((D,1))
     b0=0
-    wolfe={"a1":0.5,"a0":0.01,"c1":0.0001,"c2":0.9,"maxiter":10,"amax":1.1}
-    lbfgs_options={"maxiter":30,"termination":1e-4,"xtermination":1e-4,"m":10,"wolfe":wolfe,"echo":0}
-    retval,xstarbest,xstarfinal,history=lbfgs2(np.hstack((w0,b0),axis=1), lbfgs_options, 'li2nsvm_grad', [], X, Y, the_lambda, sigma, gamma)
+    wolfe=Params()
+    wolfe.a1=0.5
+    wolfe.a0=0.01
+    wolfe.c1=0.0001
+    wolfe.c2=0.9
+    wolfe.maxiter=10
+    wolfe.amax=1.1
+    lbfgs_options=Params()
+    lbfgs_options.maxiter=30
+    lbfgs_options.termination=1e-4
+    lbfgs_options.xtermination=1e-4
+    lbfgs_options.m=10
+    lbfgs_options.wolfe=wolfe
+    lbfgs_options.echo=0
+    # wolfe={"a1":0.5,"a0":0.01,"c1":0.0001,"c2":0.9,"maxiter":10,"amax":1.1}
+    # lbfgs_options={"maxiter":30,"termination":1e-4,"xtermination":1e-4,"m":10,"wolfe":wolfe,"echo":0}
+    retval,xstarbest,xstarfinal,history=lbfgs2(np.vstack((w0,b0)), lbfgs_options, 'li2nsvm_grad', [], X, Y, the_lambda, sigma, gamma)
     w=xstarbest[0:D]
     b=xstarbest[D]
-    return w,b
+    return w.T[0],b[0]
 
 def li2nsvm_multiclass_lbfgs(X,C,the_lambda,gamma=[]):
     Y,class_name=oneofc(C)
@@ -270,8 +295,8 @@ def li2nsvm_multiclass_lbfgs(X,C,the_lambda,gamma=[]):
     w=np.zeros((dim,cnum))
     b=np.zeros(cnum)
     for i in range(cnum):
-        if len(gamma):
-            w[:,i],b[i]=li2nsvm_lbfgs(X,Y[:,i],the_lambda)
+        if len(gamma)==0:
+            w[:,i],b[i]=li2nsvm_lbfgs(X,Y[:,i].reshape((-1,1)),the_lambda)
         else:
-            w[:,i],b[i]=li2nsvm_lbfgs(X,Y[:,i],the_lambda,[],gamma[:,i])
+            w[:,i],b[i]=li2nsvm_lbfgs(X,Y[:,i].reshape((-1,1)),the_lambda,[],gamma[:,i])
     return w,b,class_name

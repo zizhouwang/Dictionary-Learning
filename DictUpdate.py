@@ -75,6 +75,8 @@ def DictUpdate(D0=None,AAt=None,XAt=None,D2=None,params=None):
                     # L_k=modchol(H_k)
                     pass
                     # 懒得写了
+                    print("error 153")
+                    pdb.set_trace()
                 elif params.scaling=="diag":
                     a=max(AAt(k,k),params.reg_delta)
                     H_k=2*a+(2*params.xmu)*np.diag(DDt2)
@@ -82,6 +84,8 @@ def DictUpdate(D0=None,AAt=None,XAt=None,D2=None,params=None):
                 else:
                     d_k=-g_k
                     # 懒得写了
+                    print("error 163")
+                    pdb.set_trace()
                 s=params.armijo_s
                 acceptable_decrease=-params.armijo_a*g_k.T*d_k
                 if acceptable_decrease<0:
@@ -125,4 +129,6 @@ def DictUpdate(D0=None,AAt=None,XAt=None,D2=None,params=None):
     else:
         pass
         # 懒得写了
+        print("error 173")
+        pdb.set_trace()
     return D
