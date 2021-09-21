@@ -26,9 +26,14 @@ def zoom(alo, ahi, x0, f0, g0, s0, c1, c2, linegrad0, falo,galo, fhi, ghi,  f, X
     echo=False
     i=0
     while True:
-        d1=galo+ghi-3*(falo-fhi)/(alo-ahi)
+        d1=(galo+ghi-3*(falo-fhi)/(alo-ahi))
         d2=np.sqrt(d1*d1-galo*ghi)
         aj=ahi-(ahi-alo)*(ghi+d2-d1)/(ghi-galo+2*d2)
+        # pdb.set_trace()
+        if abs(d2)==np.inf or np.isnan(d2):
+            pdb.set_trace()
+        if abs(aj)==np.inf or np.isnan(aj):
+            pdb.set_trace()
         if echo==True:
             pass
         if alo<ahi:
@@ -42,13 +47,15 @@ def zoom(alo, ahi, x0, f0, g0, s0, c1, c2, linegrad0, falo,galo, fhi, ghi,  f, X
         if fj>f0+c1*aj*linegrad0 or fj>falo:
             ahi=aj
             fhi=fj
-            ghi=np.dot(gj.T,s0)
+            ghi=np.dot(gj.T,s0)[0][0]
         else:
-            linegradj=np.dot(gj.T,s0)
+            linegradj=np.dot(gj.T,s0)[0][0]
             if abs(linegradj) <= -c2*linegrad0:
                 astar=aj
                 fstar=fj
                 gstar=gj
+                if type(astar) is np.ndarray:
+                    pdb.set_trace()
                 return astar,xstar,fstar,gstar
             if linegradj*(ahi-alo)>=0:
                 ahi=alo
@@ -63,8 +70,12 @@ def zoom(alo, ahi, x0, f0, g0, s0, c1, c2, linegrad0, falo,galo, fhi, ghi,  f, X
             gstar=gj
             if echo==True:
                 pass
+            if type(astar) is np.ndarray:
+                pdb.set_trace()
             return astar,xstar,fstar,gstar
         i+=1
+    if type(astar) is np.ndarray:
+        pdb.set_trace()
     return astar,xstar,fstar,gstar
 
 def lineSearchWolfe(x0, f0, g0, s0, a1, amax, c1, c2, maxiter, f, X,Y,the_lambda,sigma,gamma):
@@ -73,25 +84,36 @@ def lineSearchWolfe(x0, f0, g0, s0, a1, amax, c1, c2, maxiter, f, X,Y,the_lambda
     ai=a1
     i=1
     fi_1=f0
-    linegrad0=np.dot(g0[:].T,s0[:])
+    linegrad0=np.dot(g0[:].T,s0[:])[0][0]
     linegradi_1=linegrad0
     while True:
         xstar=x0+ai*s0
+        if xstar[0][0]==np.inf:
+            pdb.set_trace()
         fi,gi=li2nsvm_grad(xstar,X,Y,the_lambda,sigma,gamma)
-        linegradi=np.dot(gi[:].T,s0[:])
+        linegradi=np.dot(gi[:].T,s0[:])[0][0]
         if fi>(f0+c1*ai*linegrad0) or (fi>=fi_1 and i>1):
             if echo==True:
                 pass
+            if type(ai_1) is np.ndarray:
+                pdb.set_trace()
             astar,xstar,fstar,gstar=zoom(ai_1, ai,x0,f0, g0, s0, c1, c2, linegrad0, fi_1,  linegradi_1,fi, linegradi,f, X,Y,the_lambda,sigma,gamma);
+            if type(astar) is np.ndarray:
+                pdb.set_trace()
             return astar,xstar,fstar,gstar
         if abs(linegradi)<=-c2*linegrad0:
             astar=ai
             fstar=fi
             gstar=gi
+            return astar,xstar,fstar,gstar
         if linegradi>=0:
             if echo==True:
                 pass
+            if type(ai) is np.ndarray:
+                pdb.set_trace()
             astar,xstar,fstar,gstar=zoom(ai, ai_1, x0,f0, g0, s0, c1, c2, linegrad0, fi, linegradi, fi_1, linegradi_1, f, X,Y,the_lambda,sigma,gamma);
+            if type(astar) is np.ndarray:
+                pdb.set_trace()
             return astar,xstar,fstar,gstar
         i=i+1
         if abs(ai-amax)<=0.01*amax or i>maxiter:
@@ -139,6 +161,8 @@ def li2nsvm_grad(para,X,Y,the_lambda,sigma=[],gamma=[]):
     N,D=X.shape
     w=para[0:D]
     b=para[D]
+    if para[0][0]==np.inf:
+        pdb.set_trace()
     if len(gamma)==0:
         lambdawgamma=w*the_lambda
     else:
@@ -159,8 +183,14 @@ def li2nsvm_grad(para,X,Y,the_lambda,sigma=[],gamma=[]):
         dw=2*(np.dot(active_E.T,active_X).T)+2*lambdawgamma
         db=2*np.sum(active_E)
     df=np.vstack((dw,db))
-    f=np.dot(active_E.T,active_E)+np.dot(w.T,lambdawgamma)
-    return f[0][0],df
+    f=np.dot(active_E.T,active_E)[0][0]+np.dot(w.T,lambdawgamma)[0][0]
+    # try:
+    #     f=np.dot(active_E.T,active_E)[0][0]+np.dot(w.T,lambdawgamma)[0][0]
+    # except Exception as e:
+    #     pdb.set_trace()
+    # else:
+    #     pass
+    return f,df
 
 def lbfgs2(x0, options,  f, sf, X, Y, the_lambda, sigma, gamma):
     history=Params()
@@ -171,6 +201,8 @@ def lbfgs2(x0, options,  f, sf, X, Y, the_lambda, sigma, gamma):
     y=np.zeros((n,m))
     alpha=np.zeros(m)
     x_idx=x0
+    if x0[0][0]==np.inf:
+        pdb.set_trace()
     f_idx,g_idx=li2nsvm_grad(x0,X,Y,the_lambda,sigma,gamma)
     if len(sf)!=0:
         #懒得写了
@@ -185,41 +217,49 @@ def lbfgs2(x0, options,  f, sf, X, Y, the_lambda, sigma, gamma):
     gstar=g_idx
     rou=[]
     while True:
-        if k<m:
+        if k<m-1:
             howmany=k
         else:
-            howmany=m
+            howmany=m-1
         if howmany<0:
             gamma_k=1
         else:
             gamma_k=(1./rou[howmany])/np.sum(y[:,howmany]*y[:,howmany])
+            if gamma_k==np.inf:
+                pdb.set_trace()
         q=copy.deepcopy(g_idx[:])
         for i in range(howmany,-1,-1):#从howmany倒叙循环到0
             alpha[i]=np.dot(rou[i]*s[:,i].T,q)
             q=q-alpha[i]*y[:,i].reshape((-1,1))
         s_idx=gamma_k*q
-        for i in range(howmany):
+        # print("howmany:"+str(howmany))
+        # pdb.set_trace()
+        for i in range(howmany+1):
             beta=np.dot(rou[i]*y[:,i].T,s_idx)
-            pdb.set_trace()
-            s_idx+=s[:,i]*(alpha(i)-beta)
+            s_idx+=(s[:,i]*(alpha[i]-beta)).reshape((-1,1))
         s_idx=s_idx.reshape(x0.shape)
-        if k<m:
+        if k<m-1:
             s[:,k+1]=-x_idx.T[0]
             y[:,k+1]=-g_idx.T[0]
         else:
-            s[:,:-2]=s[:,1:]
-            y[:,:-2]=y[:,1:]
-            s[:,-1]=-x_idx[:]
-            y[:,-1]=-g_idx[:]
-        if k==0:
+            s[:,:-1]=s[:,1:]
+            y[:,:-1]=y[:,1:]
+            s[:,-1]=-x_idx.T[0]
+            y[:,-1]=-g_idx.T[0]
+        if k==-1:
             astar=options.wolfe.a0
         else:
             if astar<options.wolfe.a1 and abs(astar-options.wolfe.a1)<1e-2*options.wolfe.a1:
                 astar=(astar+options.wolfe.a1)/2.
             else:
                 astar=(astar+options.wolfe.amax)/2.
+        if abs(s_idx[0][0])==np.inf or abs(s_idx[0][0])==np.nan:
+            pdb.set_trace()
         astar,xstar,fstar,gstar=lineSearchWolfe(x_idx, f_idx, g_idx, -s_idx,astar, options.wolfe.amax, options.wolfe.c1,options.wolfe.c2,options.wolfe.maxiter, f,X,Y,the_lambda,sigma,gamma)
-        if k<m:
+        
+
+        
+        if k<m-1:
             s[:,k+1]=xstar.T[0]+s[:,k+1]
             y[:,k+1]=gstar.T[0]+y[:,k+1]
             if k+1>=len(rou):
@@ -231,6 +271,8 @@ def lbfgs2(x0, options,  f, sf, X, Y, the_lambda, sigma, gamma):
             y[:,-1]=gstar.T[0]+y[:,-1]
             rou[:-1]=rou[1:]
             rou[-1]=1/np.dot(s[:,-1].reshape((1,-1)),y[:,-1].reshape((-1,1)))[0][0]
+        # print(gstar)
+        # pdb.set_trace()
         k+=1
         if options.echo==True:
             pass
@@ -248,6 +290,7 @@ def lbfgs2(x0, options,  f, sf, X, Y, the_lambda, sigma, gamma):
             xstarfinal=xstar
             if len(sf)==0:
                 xstarbest=xstar
+            # pdb.set_trace()
             return retval,xstarbest,xstarfinal,history
         if k>=options.maxiter:
             if options.echo==True:
@@ -256,10 +299,12 @@ def lbfgs2(x0, options,  f, sf, X, Y, the_lambda, sigma, gamma):
             xstarfinal=xstar
             if len(sf)==0:
                 xstarbest=xstar
+            # pdb.set_trace()
             return retval,xstarbest,xstarfinal,history
         f_idx=fstar
         g_idx=gstar
         x_idx=xstar
+    # pdb.set_trace()
     return retval,xstarbest,xstarfinal,history
 
 def li2nsvm_lbfgs(X,Y,the_lambda,sigma=[],gamma=[]):

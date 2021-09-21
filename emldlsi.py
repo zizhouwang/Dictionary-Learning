@@ -152,15 +152,15 @@ for m in range(xmu.shape[0]):
         # for i in range(aa.shape[0]):
         #     aa[i][i]=0
         D0_reg[i]=the_dict
-    params=DefaultModelParams()
-    params.model=Params()
+    params=Params()
+    params.model=DefaultModelParams()
     params.model.lambda2=0.003
     params.model.lambda1=0.04
     params.mu0=0.0
     params.xmu0=0.05
     params.mu_mode=[-1]
     params.positive=False
-    params.max_iter=1000
+    params.max_iter=10
     params.min_change=1e-5
     params.batch_size=0
     params.test_size=0
@@ -188,9 +188,9 @@ for m in range(xmu.shape[0]):
     output1,output2,output3 = LocalClassifier(test_data_reg,D,A_mean,testparam,Uk,bk,params.model.lambda1)
     toutput1,toutput2,toutput3 = LocalClassifier(train_data_reg,D,A_mean,testparam,Uk,bk,params.model.lambda1)
     test_Annotation= 2*test_Annotation-1
-    RankingLoss[m]=Ranking_loss(output1,test_Annotation)
+    # RankingLoss[m]=Ranking_loss(output1,test_Annotation)
     Average_Precision[m]=Average_precision(output1,test_Annotation)
-    Coverage[m]=coverage(output1,test_Annotation)
-    OneError[m]=One_error(output1,test_Annotation)
-result_data=[xmu,Average_Precision,Coverage,OneError,RankingLoss]
+    # Coverage[m]=coverage(output1,test_Annotation)
+    # OneError[m]=One_error(output1,test_Annotation)
+# result_data=[xmu,Average_Precision,Coverage,OneError,RankingLoss]
 pdb.set_trace()

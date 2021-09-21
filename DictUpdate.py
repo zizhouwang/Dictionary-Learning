@@ -24,7 +24,7 @@ class Params:
     pass
 
 def DictUpdate(D0=None,AAt=None,XAt=None,D2=None,params=None):
-    if D0==None:
+    if D0 is None:
         params = Params()
         params.mu = 0
         params.xmu = 0

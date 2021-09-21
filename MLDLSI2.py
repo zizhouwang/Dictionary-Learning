@@ -2,6 +2,7 @@ import time
 import pdb
 import numpy as np
 from SSDL_GU import *
+from DictUpdate import *
 from li2nsvm_multiclass_lbfgs import *
 from sklearn.decomposition import SparseCoder
 from numpy.linalg import norm
@@ -36,7 +37,7 @@ def ModelEnergy2(X,D,A,params):
         E=X-D@A
         E=LA.norm(E)
         E=E*E*0.5
-        E_within=A-repmat(np.mean(A,axis=1),1,A.shape[1])
+        E_within=A-repmat(np.mean(A,axis=1).reshape((-1,1)),1,A.shape[1])
         E_within=LA.norm(E_within)
         E_within=E_within*E_within
         E_within=E_within*params.lambda2*0.5
@@ -103,7 +104,7 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
     max_coherence=np.zeros((params.max_iter,NC))
     max_cross_coherence=np.zeros((params.max_iter,NC))
     mean_cross_coherence=np.zeros((params.max_iter,NC))
-    accumulated_N=np.zeros((1,NC))
+    accumulated_N=np.zeros((NC))
     acciter=np.zeros((params.max_iter,NC))
 
     prefix=GetPrefix(params)
@@ -113,10 +114,11 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
     params.testing_labels=[]
     params.training_labels=[]
     params.D0=[]
+    P=[]
     scio.savemat(prefix+'-params.mat', {'params':params})
     params=params2
 
-    DataNum=np.zeros(NC)
+    DataNum=np.zeros(NC,dtype=int)
     X=np.empty(NC,dtype=object)
     DataXb=np.empty((Xb.shape[0],0))
     for i in range(NC):
@@ -158,11 +160,12 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
         if class_idx[i]==-1:
             class_space=class_space+1
             class_idx[i]=class_space-1
-        Y[i,int(class_idx[i]-1)]=1
+        Y[i,int(class_idx[i])]=1
     Y_label=np.sign(Y-0.5)
     for r in range(params.max_iter):
         dD=np.empty(NC,dtype=object)
         print("r="+str(r)+"\n")
+        sys.stdout.flush()
         find=np.arange(finished.shape[0])[finished<3]
         if find.shape[0]==0:
             if params.mu_mode[0]<0 and (params.mu0>0 or params.xmu0>0):
@@ -182,7 +185,7 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
             D2=np.zeros((M,int(np.sum(K)-K[c])))
             D2_weight=np.zeros((M,int(np.sum(K)-K[c])))
             for c2 in range(c-1):
-                D2[:,int(np.sum(K[:c2]-K[c])):int(np.sum(K[:c2+1]))]=D[c2]
+                D2[:,int(np.sum(K[:c2])):int(np.sum(K[:c2+1]))]=D[c2]
                 D2_weight[:,int(np.sum(K[:c2])):int(np.sum(K[:c2+1]))]=D[c2]*1.*labelCorr[c,c2]
             for c2 in range(c+1,NC,1):
                 D2[:,int(np.sum(K[:c2])-K[c]):int(np.sum(K[:c2+1])-K[c])]=D[c2]
@@ -191,7 +194,7 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                 Xbc=Xb[:,labelsb[labelname[c],:]==1]
                 Nc=Xbc.shape[1]
                 old_Nc=params.remember_factor*accumulated_N[c]
-                if r>1:
+                if r>0:
                     l1_energy[r,c]=l1_energy[r-1,c]*old_Nc
                 else:
                     l1_energy[r,c]=0
@@ -210,18 +213,24 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                     fac2=0
                 mu=fac*mu
                 xmu=fac*xmu
-                if r==1:
+                if r==0:
                     A1[c]=np.ones((Dc.shape[1],Xbc.shape[1]))
-                P[c]=LA.inv(np.dot(D[c].T,D[c])+params.model.lambda1*np.eye(D[c].T.shape[0]))
-                if r!=1:
+                if c>=len(P):
+                    temp_gram=D[c].T@D[c]
+                    # temp_gram[abs(temp_gram)<1e-10]=0
+                    P.append(LA.inv(temp_gram+params.model.lambda1*np.eye(D[c].T.shape[0])))
+                else:
+                    P[c]=LA.inv(np.dot(D[c].T,D[c])+params.model.lambda1*np.eye(D[c].T.shape[0]))
+                if r!=0:
                     num=0
-                    if c!=1:
+                    if c!=0:
                         for k in range(c-1):
                             num=num+DataNum[k]
-                    for j in range(DataNum[c]):
-                        Y_labelki=np.dot(A1_sum[:,num].T,Uk)+bk
+                    for j in range(int(DataNum[c])):
+                        num=int(num)
+                        Y_labelki=np.dot(A1_sum[:,int(num)].T,Uk)+bk
                         found_arr=Y_labelki*Y_label[num,:]
-                        loss_idx=np.arange(found_arr.shape[0])[found_arr<3]
+                        loss_idx=np.arange(found_arr.shape[0])[found_arr<1]
                         if loss_idx.shape[0]==0:
                             A1_sum[:,num]=np.dot(np.dot(P[c],D[c].T),DataXb[:,num])
                         else:
@@ -231,36 +240,41 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                             ski=np.dot(D[c].T,DataXb[:,num])+2*lambda2*theta*(np.dot(Uk_idx,Yi_idx.T)-np.dot(Uk_idx,bk_idx.T))
                             Tki=LA.inv(np.eye(Uk_idx.shape[1])+2*lambda2*theta*np.dot(np.dot(Uk_idx.T,P[c]),Uk_idx))
                             A1_sum[:,num]=(P[c]-2*lambda2*theta*P[c]@Uk_idx@Tki@Uk_idx.T@P[c])@ski
+                        # print(abs(A1_sum).sum())
                         num+=1
-                    temp_z=copy.deepcopy(temp_z)
+                    temp_z=copy.deepcopy(A1_sum)
                     num=0
-                    if c!=1:
-                        for k in c-1:
+                    if c!=0:
+                        for k in range(c-1):
                             num=num+DataNum[k]
-                    for j in DataNum[c]:
+                    for j in range(int(DataNum[c])):
                         A1[c][:,j]=A1_sum[:,num]
                         num+=1
                     A1_mean[c]=np.mean(A1[c],axis=1)
                     temp_z=copy.deepcopy(A1_sum)
                 else:
                     A1[c]=P[c]@D[c].T@X[c]
-                    temp_z=np.hstack((temp_z,A1[c]))
+                    if temp_z is None:
+                        temp_z=copy.deepcopy(A1[c])
+                    else:
+                        temp_z=np.hstack((temp_z,A1[c]))
                     A1_mean[c]=np.mean(A1[c],axis=1)
                 new_energy[r,c]=ModelEnergy2(Xbc,D[c],A1[c],params.model)
                 l1_energy[r,c]=(l1_energy[r,c]+new_energy[r,c])/accumulated_N[c]
-                XAt[c]=params.remember_factor@XAt[c]+Xbc@A1[c].T
-                AAt[c]=params.remember_factor@AAt[c]+A1[c]@A1[c].T
+                XAt[c]=params.remember_factor*XAt[c]+Xbc@A1[c].T
+                AAt[c]=params.remember_factor*AAt[c]+A1[c]@A1[c].T
                 batch_usage=np.sum(A1[c]!=0,axis=1)
-                Dusage[c]=params.remember_factor@Dusage[c]+batch_usage
-                Dmean[c]=params.remember_factor@Dmean[c]+(np.sum(A1[c],axis=1).T)/batch_usage
-                Dvar[c]=params.remember_factor@Dvar[c]+(np.sum(A1[c]*A1[c],axis=1).T)/batch_usage
+                Dusage[c]=params.remember_factor*Dusage[c]+batch_usage
+                Dmean[c]=params.remember_factor*Dmean[c]+(np.sum(A1[c],axis=1).T)/batch_usage
+                Dvar[c]=params.remember_factor*Dvar[c]+(np.sum(A1[c]*A1[c],axis=1).T)/batch_usage
                 params.dict_update.mu       = mu;
                 params.dict_update.xmu      = xmu;
                 params.dict_update.positive = params.positive;
                 params.dict_update.c        = c;
                 params.dict_update.NC       = NC;
-                Dc,stuck=DictUpdate(D[c],AAt[c],XAt[c],D2_weight,params.dict_update)
-                if np.sum(Dc*Dc,axis=0).max()>(1+sqrt(eps)):
+                # Dc,stuck=DictUpdate(D[c],AAt[c],XAt[c],D2_weight,params.dict_update)
+                Dc=DictUpdate(D[c],AAt[c],XAt[c],D2_weight,params.dict_update)
+                if np.sum(Dc*Dc,axis=0).max()>(1+sqrt(np.spacing(1))):
                     print("error np.sum(Dc*Dc,axis=0).max()>(1+sqrt(eps))")
                     pdb.set_trace()
                 if params.discard_unused_atoms>0:
@@ -273,7 +287,9 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                         params.discard_unused_atoms = params.discard_unused_atoms / 10
                     aux=np.arange(Xb.shape[1])
                     random.shuffle(aux)
-                    Dc[:,dead_atoms[:aux.shape[0]]]=preprocessing.normalize(Xb[:,aux].T, norm='l2').T
+                    aux = aux[0:min(Dc.shape[1],Xb.shape[1],dead_atoms.shape[0])]
+                    if aux.shape[0]>0:
+                        Dc[:,dead_atoms[:aux.shape[0]]]=preprocessing.normalize(Xb[:,aux].T, norm='l2').T
                     Dusage[c][dead_atoms]=Nc/2.
                     if dead_atoms.shape[0]>0:
                         print('reset '+str(dead_atoms.shape[0]+' atoms:'))
@@ -292,7 +308,7 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                 max_coherence[r,c]=max_coherence[r-1,c]
                 mean_coherence[r,c]=mean_coherence[r-1,c]
             xc[c]=abs(D2_weight.T@Dc)
-            max_cross_coherence[r,c]=np.mean(xc[c].reshape[-1,1])
+            max_cross_coherence[r,c]=np.mean(xc[c].reshape((-1,1)))
             cost[r,c]=l1_energy[r,c]
             if params.mu0>0:
                 mu=params.mu0/(K[c]*K[c])
@@ -302,11 +318,15 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
             if params.xmu0>0:
                 xc_2=xc[c]*xc[c]
                 cost[r,c]=cost[r,c]+xmu*np.sum(np.sum(xc_2,axis=0))
-            if r>1:
-                cost_dif=abs(cost(r-1,c)-cost(r,c))/cost[0,c]#原版本说这里是否应修改
+            if r>0:
+                cost_dif=abs(cost[r-1,c]-cost[r,c])/cost[0,c]#原版本说这里是否应修改
                 if cost_dif<params.min_change:
                     finished[c]=finished[c]+1
                 else:
                     finished[c]=0
+        A1_sum=copy.deepcopy(temp_z)
+        # print(abs(temp_z).sum())
+        pass
         #save('xin','Uk','D','AAt','XAt','Dusage','xc','mean_coherence','max_coherence','mean_cross_coherence','max_cross_coherence','finished','r','l1_energy','new_energy','acciter','cost');
         #保存为xin.mat
+    return D,A1_mean,Dusage,Uk,bk
