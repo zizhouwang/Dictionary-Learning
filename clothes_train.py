@@ -70,7 +70,7 @@ for a2 in range(100):
     transform_n_nonzero_coefs=30
     n_features = image_vecs.shape[0]
 
-    inds_of_file_path_path='inds_of_file_path_wzz_'+py_file_name+'_'+str(w)+'_'+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy'
+    inds_of_file_path_path='model/inds_of_file_path_wzz_'+py_file_name+'_'+str(w)+'_'+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy'
     if os.path.isfile(inds_of_file_path_path):
         inds_of_file_path=np.load(inds_of_file_path_path)
         for class_index in classes:
@@ -191,17 +191,17 @@ for a2 in range(100):
     the_X=(coder.transform(image_vecs.T)).T
     # D_all=incoherent(D_all,image_vecs,the_X,1)
     D_all=preprocessing.normalize(D_all.T, norm='l2').T
-    np.save("D_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2),D_all)
+    np.save("model/D_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2),D_all)
     print("D_all saved")
     W_all=Ws
     W_all=W_all.transpose((0,2,1))
     W_all=W_all.reshape(-1,n_classes).T
-    np.save("W_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2),W_all)
+    np.save("model/W_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2),W_all)
     print("W_all saved")
     A_all=As
     A_all=A_all.transpose((0,2,1))
     A_all=A_all.reshape(-1,n_classes*n_atoms).T
-    np.save("A_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2),A_all)
+    np.save("model/A_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2),A_all)
     print("A_all saved")
 
     np.save(inds_of_file_path_path,inds_of_file_path)

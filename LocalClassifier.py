@@ -57,33 +57,6 @@ def Average_precision(Outputs,test_target):
             else:
                 not_Label[i]=np.hstack((not_Label[i],np.array([j])))
     aveprec=0
-    # for i in range(num_instance):
-    #     temp=Outputs[:,i]
-    #     index=temp.argsort()
-    #     temp.sort()
-    #     tempvalue=temp
-    #     indicator=np.zeros(num_class)
-    #     for m in range(int(Label_size[i])):
-    #         res=np.where(index==Label[i][m])[0]
-    #         if res.shape[0]==0:
-    #             tempvalue=0
-    #             loc=0
-    #         else:
-    #             tempvalue=1
-    #             loc=res[0]
-    #         indicator[loc]=1
-    #     summary=0
-    #     for m in range(int(Label_size[i])):
-    #         res=np.where(index==Label[i][m])[0]
-    #         if res.shape[0]==0:
-    #             tempvalue=0
-    #             loc=0
-    #         else:
-    #             tempvalue=1
-    #             loc=res[0]
-    #         summary+=np.sum(indicator[loc:num_class])/(num_class-loc+0)
-    #     ap_binary.append(summary/Label_size[i])
-    #     aveprec+=summary/Label_size[i]
     correct_num=0
     for i in range(num_instance):
         temp=Outputs[:,i]

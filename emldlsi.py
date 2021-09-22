@@ -118,6 +118,7 @@ train_Annotation=data['train_Annotation']
 test_data=data['test_data']
 test_data_reg=preprocessing.normalize(test_data.T, norm='l2').T
 test_Annotation=data['test_Annotation']
+test_Annotation.dtype="int8"
 testNum=test_data.shape[1]
 labelNum=test_Annotation.shape[0]
 featureDim=test_data.shape[0]
