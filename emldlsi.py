@@ -160,7 +160,7 @@ for m in range(xmu.shape[0]):
     params.xmu0=0.05
     params.mu_mode=[-1]
     params.positive=False
-    params.max_iter=10
+    params.max_iter=1
     params.min_change=1e-5
     params.batch_size=0
     params.test_size=0
@@ -182,6 +182,9 @@ for m in range(xmu.shape[0]):
     params.dict_update.xcorr = 1
     params.D0 = D0_reg
     D,A_mean,Dusage,Uk,bk        = MLDLSI2(params)
+    A_mean_sum=0
+    for index_A in range(A_mean.shape[0]):
+        A_mean_sum=A_mean_sum+abs(A_mean[index_A]).sum()
     testparam=Params()
     testparam.lambda1=params.model.the_lambda
     testparam.lambda2=0.04
@@ -189,8 +192,9 @@ for m in range(xmu.shape[0]):
     toutput1,toutput2,toutput3 = LocalClassifier(train_data_reg,D,A_mean,testparam,Uk,bk,params.model.lambda1)
     test_Annotation= 2*test_Annotation-1
     # RankingLoss[m]=Ranking_loss(output1,test_Annotation)
-    Average_Precision[m]=Average_precision(output1,test_Annotation)
+    Average_Precision[m],Average_Precision1=Average_precision(output1,test_Annotation)
+    pass
     # Coverage[m]=coverage(output1,test_Annotation)
     # OneError[m]=One_error(output1,test_Annotation)
 # result_data=[xmu,Average_Precision,Coverage,OneError,RankingLoss]
-pdb.set_trace()
+# pdb.set_trace()
