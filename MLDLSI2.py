@@ -71,9 +71,9 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                 labelCorr[i,j]=pdist([params.training_labels[i,:]+0.,params.training_labels[j,:]+0.],'cosine')
     for i in range(NC):
         M,K[i]=params.D0[i].shape
-    Xb=params.training_data
-    labelsb=params.training_labels
-    D=params.D0
+    Xb=copy.deepcopy(params.training_data)
+    labelsb=copy.deepcopy(params.training_labels)
+    D=copy.deepcopy(params.D0)
     r0=1
     dDn=np.zeros(NC)
     finished=np.zeros(NC)
@@ -122,7 +122,7 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
     X=np.empty(NC,dtype=object)
     DataXb=np.empty((Xb.shape[0],0))
     for i in range(NC):
-        X[i]=Xb[:,labelsb[i,:]==1]
+        X[i]=copy.deepcopy(Xb[:,labelsb[i,:]==1])
         DataNum[i]=X[i].shape[1]
         DataXb=np.hstack((DataXb,X[i]))
     Uinit=np.zeros((DataXb.shape[0],NC))

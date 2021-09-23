@@ -161,7 +161,7 @@ for m in range(xmu.shape[0]):
     params.xmu0=0.05
     params.mu_mode=[-1]
     params.positive=False
-    params.max_iter=1
+    params.max_iter=10
     params.min_change=1e-5
     params.batch_size=0
     params.test_size=0
@@ -194,7 +194,7 @@ for m in range(xmu.shape[0]):
     test_Annotation= 2*test_Annotation-1
     # RankingLoss[m]=Ranking_loss(output1,test_Annotation)
     Average_Precision[m],Average_Precision1=Average_precision(output1,test_Annotation)
-    pass
+    print(Average_Precision[m])
     # Coverage[m]=coverage(output1,test_Annotation)
     # OneError[m]=One_error(output1,test_Annotation)
 # result_data=[xmu,Average_Precision,Coverage,OneError,RankingLoss]
