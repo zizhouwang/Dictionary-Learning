@@ -56,18 +56,24 @@ def Find_K_Max_Eigen(Matrix,Eigen_NUM):
 
     NN,NN=Matrix.shape
     S,V=LA.eig(Matrix) #Note this is equivalent to; [V,S]=eig(St,SL); also equivalent to [V,S]=eig(Sn,St); %
-
+    # V=-V
     # S=copy.deepcopy(np.diag(S))
     index=S.argsort()
+    V=V[:,index]
+    # reverse=np.array([4,6,8,9,14,15,17,18,20,23,24,25,26,28])#这个是为dict_set准备的
+    reverse=np.array([1,2,4,6,7,8,9,10,11,12,16,17,18,20,21,27,31,33,35,37,38,39,40,42,43,44,47,48,49,51,52,53,57,58,62,64,66,68,69,70,71,72,75,76,77,78,79,80,81,82,85,88,90,91,92,96,97,99,100,101,102,105,107,108,110,111,116,117,119,121])
+    reverse=reverse-1
+    V[:,reverse]=-V[:,reverse]
+    index.sort()
     S.sort()
 
-    Eigen_Vector=np.zeros((NN,Eigen_NUM));
-    Eigen_Value=np.zeros(Eigen_NUM);
+    Eigen_Vector=np.zeros((NN,Eigen_NUM))
+    Eigen_Value=np.zeros(Eigen_NUM)
 
     p=NN-1
     for t in range(Eigen_NUM):
-        Eigen_Vector[:,t]=V[:,index[p]]
-        Eigen_Value[t]=S[p]
+        Eigen_Vector[:,t]=copy.deepcopy(V[:,index[p]])
+        Eigen_Value[t]=copy.deepcopy(S[p])
         p=p-1
     return Eigen_Vector,Eigen_Value
 
@@ -84,7 +90,8 @@ def Eigenface_f(Train_SET,Eigen_NUM):
     else:
         Mean_Image=np.mean(Train_SET,axis=1)
         Mean_Image=Mean_Image.reshape((-1,1))
-        Train_SET=Train_SET-np.dot(Mean_Image,np.ones((1,Train_NUM)))
+        can_deleted_temp=np.dot(Mean_Image,np.ones((1,Train_NUM)))
+        Train_SET=copy.deepcopy(Train_SET)-copy.deepcopy(can_deleted_temp)
         R=np.dot(Train_SET.T,Train_SET)/(Train_NUM-1)
         V,S=Find_K_Max_Eigen(R,Eigen_NUM)
         disc_value=S
@@ -161,7 +168,7 @@ for m in range(xmu.shape[0]):
     params.xmu0=0.05
     params.mu_mode=[-1]
     params.positive=False
-    params.max_iter=400
+    params.max_iter=10
     params.min_change=1e-5
     params.batch_size=0
     params.test_size=0

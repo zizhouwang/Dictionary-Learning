@@ -177,7 +177,8 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                 finished[:]=0
             else:
                 break
-
+        if r>0:
+            a=1
         Uk, bk, class_name = li2nsvm_multiclass_lbfgs(A1_sum.T,y, tau)
         temp_z=None
         for c in range(NC):
