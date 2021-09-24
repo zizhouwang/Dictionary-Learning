@@ -208,16 +208,15 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                         fac=(r>params.mu_mode[0])
                     else:
                         fac=min(1,max(0,(r-params.mu_mode[0])/(params.mu_mode[1]-params.mu_mode[0])))
-                    fac2=1
                 else:
                     fac=0
-                    fac2=0
                 mu=fac*mu
                 xmu=fac*xmu
                 if r==0:
                     A1[c]=np.ones((Dc.shape[1],Xbc.shape[1]))
                 if c>=len(P):
                     temp_gram=D[c].T@D[c]
+                    temp_gram[abs(temp_gram)<1e-10]=0
                     # temp_gram[abs(temp_gram)<1e-10]=0
                     P.append(LA.inv(temp_gram+params.model.lambda1*np.eye(D[c].T.shape[0])))
                 else:
@@ -240,10 +239,9 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                             bk_idx=bk[loss_idx]
                             ski=np.dot(D[c].T,DataXb[:,num])+2*lambda2*theta*(np.dot(Uk_idx,Yi_idx.T)-np.dot(Uk_idx,bk_idx.T))
                             Tki=LA.inv(np.eye(Uk_idx.shape[1])+2*lambda2*theta*np.dot(np.dot(Uk_idx.T,P[c]),Uk_idx))
+                            P[c]=np.around(P[c], decimals=4)
                             A1_sum[:,num]=(P[c]-2*lambda2*theta*P[c]@Uk_idx@Tki@Uk_idx.T@P[c])@ski
-                        # print(abs(A1_sum).sum())
                         num+=1
-                    temp_z=copy.deepcopy(A1_sum)
                     num=0
                     if c!=0:
                         for k in range(c-1):

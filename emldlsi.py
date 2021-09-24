@@ -52,7 +52,7 @@ def DefaultModelParams():
     params.l2err = (8**2)*(1.15**2)*((1/255)**2);
     return params
 
-def Find_K_Max_Eigen(Matrix,Eigen_NUM):
+def Find_K_Max_Eigen(Matrix,Eigen_NUM,Train_SET=None):
 
     NN,NN=Matrix.shape
     S,V=LA.eig(Matrix) #Note this is equivalent to; [V,S]=eig(St,SL); also equivalent to [V,S]=eig(Sn,St); %
@@ -71,6 +71,8 @@ def Find_K_Max_Eigen(Matrix,Eigen_NUM):
     Eigen_Value=np.zeros(Eigen_NUM)
 
     p=NN-1
+    V=V.real
+    S=S.real
     for t in range(Eigen_NUM):
         Eigen_Vector[:,t]=copy.deepcopy(V[:,index[p]])
         Eigen_Value[t]=copy.deepcopy(S[p])
@@ -93,7 +95,7 @@ def Eigenface_f(Train_SET,Eigen_NUM):
         can_deleted_temp=np.dot(Mean_Image,np.ones((1,Train_NUM)))
         Train_SET=copy.deepcopy(Train_SET)-copy.deepcopy(can_deleted_temp)
         R=np.dot(Train_SET.T,Train_SET)/(Train_NUM-1)
-        V,S=Find_K_Max_Eigen(R,Eigen_NUM)
+        V,S=Find_K_Max_Eigen(R,Eigen_NUM,Train_SET)
         disc_value=S
         disc_set=np.zeros((NN,Eigen_NUM))
         Train_SET=Train_SET/math.sqrt(Train_NUM-1)
