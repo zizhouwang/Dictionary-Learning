@@ -161,7 +161,7 @@ for m in range(xmu.shape[0]):
     params.xmu0=0.05
     params.mu_mode=[-1]
     params.positive=False
-    params.max_iter=10
+    params.max_iter=400
     params.min_change=1e-5
     params.batch_size=0
     params.test_size=0
