@@ -177,15 +177,15 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                 finished[:]=0
             else:
                 break
-        if r>0:
-            a=1
         Uk, bk, class_name = li2nsvm_multiclass_lbfgs(A1_sum.T,y, tau)
         temp_z=None
         for c in range(NC):
+            if r>0 and c>0:
+                a=1
             Dc=D[c]
             D2=np.zeros((M,int(np.sum(K)-K[c])))
             D2_weight=np.zeros((M,int(np.sum(K)-K[c])))
-            for c2 in range(c-1):
+            for c2 in range(c):
                 D2[:,int(np.sum(K[:c2])):int(np.sum(K[:c2+1]))]=D[c2]
                 D2_weight[:,int(np.sum(K[:c2])):int(np.sum(K[:c2+1]))]=D[c2]*1.*labelCorr[c,c2]
             for c2 in range(c+1,NC,1):
@@ -216,7 +216,7 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                     A1[c]=np.ones((Dc.shape[1],Xbc.shape[1]))
                 if c>=len(P):
                     temp_gram=D[c].T@D[c]
-                    temp_gram[abs(temp_gram)<1e-10]=0
+                    # temp_gram[abs(temp_gram)<1e-10]=0
                     # temp_gram[abs(temp_gram)<1e-10]=0
                     P.append(LA.inv(temp_gram+params.model.lambda1*np.eye(D[c].T.shape[0])))
                 else:
@@ -224,7 +224,7 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                 if r!=0:
                     num=0
                     if c!=0:
-                        for k in range(c-1):
+                        for k in range(c):
                             num=num+DataNum[k]
                     for j in range(int(DataNum[c])):
                         num=int(num)
@@ -239,13 +239,17 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                             bk_idx=bk[loss_idx]
                             ski=np.dot(D[c].T,DataXb[:,num])+2*lambda2*theta*(np.dot(Uk_idx,Yi_idx.T)-np.dot(Uk_idx,bk_idx.T))
                             Tki=LA.inv(np.eye(Uk_idx.shape[1])+2*lambda2*theta*np.dot(np.dot(Uk_idx.T,P[c]),Uk_idx))
-                            P[c]=np.around(P[c], decimals=4)
+                            # P[c]=np.around(P[c], decimals=4)
                             A1_sum[:,num]=(P[c]-2*lambda2*theta*P[c]@Uk_idx@Tki@Uk_idx.T@P[c])@ski
                         num+=1
                     num=0
                     if c!=0:
-                        for k in range(c-1):
+                        for k in range(c):
                             num=num+DataNum[k]
+                    if r>0 and c==0:
+                        a=1
+                    if r>0 and c>0:
+                        a=1
                     for j in range(int(DataNum[c])):
                         A1[c][:,j]=A1_sum[:,num]
                         num+=1

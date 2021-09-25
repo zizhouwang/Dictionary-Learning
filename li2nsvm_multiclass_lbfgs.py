@@ -255,10 +255,17 @@ def lbfgs2(x0, options,  f, sf, X, Y, the_lambda, sigma, gamma):
                 astar=(astar+options.wolfe.amax)/2.
         if abs(s_idx[0][0])==np.inf or abs(s_idx[0][0])==np.nan:
             pdb.set_trace()
-        astar,xstar,fstar,gstar=lineSearchWolfe(x_idx, f_idx, g_idx, -s_idx,astar, options.wolfe.amax, options.wolfe.c1,options.wolfe.c2,options.wolfe.maxiter, f,X,Y,the_lambda,sigma,gamma)
-        
+        astar, xstar, fstar, gstar = lineSearchWolfe(x_idx, f_idx, g_idx, -s_idx, astar, options.wolfe.amax,
+                                                     options.wolfe.c1, options.wolfe.c2, options.wolfe.maxiter, f, X, Y,
+                                                     the_lambda, sigma, gamma)
+        # if X[0, 0] <= 0.1573 and X[0, 0] >= 0.1572 and sum(Y) == -485:
+        #     print(xstar.sum())
+        #     a = 1
+        #     print(k)
+        # astar, xstar, fstar, gstar = lineSearchWolfe(x_idx, f_idx, g_idx, -s_idx, astar, options.wolfe.amax,
+        #                                              options.wolfe.c1, options.wolfe.c2, options.wolfe.maxiter, f, X, Y,
+        #                                              the_lambda, sigma, gamma)
 
-        
         if k<m-1:
             s[:,k+1]=xstar.T[0]+s[:,k+1]
             y[:,k+1]=gstar.T[0]+y[:,k+1]
@@ -292,7 +299,7 @@ def lbfgs2(x0, options,  f, sf, X, Y, the_lambda, sigma, gamma):
                 xstarbest=xstar
             # pdb.set_trace()
             return retval,xstarbest,xstarfinal,history
-        if k>=options.maxiter:
+        if k>=options.maxiter-1:
             if options.echo==True:
                 pass
             retval=1

@@ -53,17 +53,17 @@ def DefaultModelParams():
     return params
 
 def Find_K_Max_Eigen(Matrix,Eigen_NUM,Train_SET=None):
-
+    if Train_SET.shape[1]==160:
+        a=1
     NN,NN=Matrix.shape
     S,V=LA.eig(Matrix) #Note this is equivalent to; [V,S]=eig(St,SL); also equivalent to [V,S]=eig(Sn,St); %
-    # V=-V
     # S=copy.deepcopy(np.diag(S))
     index=S.argsort()
     V=V[:,index]
     # reverse=np.array([4,6,8,9,14,15,17,18,20,23,24,25,26,28])#这个是为dict_set准备的
     reverse=np.array([1,2,4,6,7,8,9,10,11,12,16,17,18,20,21,27,31,33,35,37,38,39,40,42,43,44,47,48,49,51,52,53,57,58,62,64,66,68,69,70,71,72,75,76,77,78,79,80,81,82,85,88,90,91,92,96,97,99,100,101,102,105,107,108,110,111,116,117,119,121])
     reverse=reverse-1
-    V[:,reverse]=-V[:,reverse]
+    # V[:,reverse]=-V[:,reverse]
     index.sort()
     S.sort()
 
@@ -107,7 +107,8 @@ def Dict_Ini(data,nCol,wayInit):
     m=data.shape[0]
     if wayInit=="pca":
         (D,disc_value,Mean_Image)=Eigenface_f(data,nCol-1)
-        Mean_Image=preprocessing.normalize(Mean_Image.T, norm='l2').T
+        D[:,-1]=-D[:,-1]
+        # Mean_Image=preprocessing.normalize(Mean_Image.T, norm='l2').T
         D=np.hstack((D,Mean_Image))
     elif wayInit=="random":
         phi=np.random.randn(m,nCol)
@@ -119,6 +120,7 @@ def Dict_Ini(data,nCol,wayInit):
 
 # data = scipy.io.loadmat('clothes5.mat') # 读取mat文件
 data = scipy.io.loadmat('T4.mat') # 读取mat文件
+D_init = scipy.io.loadmat('D_init.mat')['D0_reg'][0] # 读取mat文件
 # print(data.keys())  # 查看mat文件中的所有变量
 train_data=data['train_data']
 train_data_reg=preprocessing.normalize(train_data.T, norm='l2').T
@@ -162,6 +164,7 @@ for m in range(xmu.shape[0]):
         # for i in range(aa.shape[0]):
         #     aa[i][i]=0
         D0_reg[i]=the_dict
+    D0_reg=copy.deepcopy(D_init)
     params=Params()
     params.model=DefaultModelParams()
     params.model.lambda2=0.003
@@ -170,7 +173,13 @@ for m in range(xmu.shape[0]):
     params.xmu0=0.05
     params.mu_mode=[-1]
     params.positive=False
-    params.max_iter=10
+
+
+
+    params.max_iter=1000
+
+
+
     params.min_change=1e-5
     params.batch_size=0
     params.test_size=0
@@ -192,9 +201,12 @@ for m in range(xmu.shape[0]):
     params.dict_update.xcorr = 1
     params.D0 = D0_reg
     D,A_mean,Dusage,Uk,bk        = MLDLSI2(params)
+    for i in range(D.shape[0]):
+        print(D[i].sum())
     A_mean_sum=0
     for index_A in range(A_mean.shape[0]):
-        A_mean_sum=A_mean_sum+abs(A_mean[index_A]).sum()
+        # print(A_mean[index_A].sum())
+        A_mean_sum=A_mean_sum+A_mean[index_A].sum()
     testparam=Params()
     testparam.lambda1=params.model.the_lambda
     testparam.lambda2=0.04
@@ -203,6 +215,7 @@ for m in range(xmu.shape[0]):
     test_Annotation= 2*test_Annotation-1
     # RankingLoss[m]=Ranking_loss(output1,test_Annotation)
     Average_Precision[m],Average_Precision1=Average_precision(output1,test_Annotation)
+    print()
     print(Average_Precision[m])
     # Coverage[m]=coverage(output1,test_Annotation)
     # OneError[m]=One_error(output1,test_Annotation)
