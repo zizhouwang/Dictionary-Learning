@@ -61,9 +61,9 @@ def DictUpdate(D0=None,AAt=None,XAt=None,D2=None,params=None):
                     print("Ooops!")
                     D_k=np.random.randn(M,1)
                 D[:,k]=(1/LA.norm(D_k))*D_k
-    elif params.mu==0 and D2!=None and D2.shape[0]>0:
+    elif params.mu==0 and D2 is not None and D2.shape[0]>0:
         DDt2=D2@D2.T
-        for J in params.max_iter:
+        for J in range(params.max_iter):
             if params.debug:
                 print(str(J)+"/"+str(params.max_iter))
             for k in range(K):
@@ -78,7 +78,7 @@ def DictUpdate(D0=None,AAt=None,XAt=None,D2=None,params=None):
                     print("error 153")
                     pdb.set_trace()
                 elif params.scaling=="diag":
-                    a=max(AAt(k,k),params.reg_delta)
+                    a=max(AAt[k,k],params.reg_delta)
                     H_k=2*a+(2*params.xmu)*np.diag(DDt2)
                     d_k=-g_k/H_k
                 else:
@@ -87,7 +87,7 @@ def DictUpdate(D0=None,AAt=None,XAt=None,D2=None,params=None):
                     print("error 163")
                     pdb.set_trace()
                 s=params.armijo_s
-                acceptable_decrease=-params.armijo_a*g_k.T*d_k
+                acceptable_decrease=-params.armijo_a*g_k.T@d_k
                 if acceptable_decrease<0:
                     print("Not a descent direction")
                     pdb.set_trace()
@@ -101,7 +101,7 @@ def DictUpdate(D0=None,AAt=None,XAt=None,D2=None,params=None):
                         D_k[D_k<0]=0.
                     D_k=D_k*(1./LA.norm(D_k))
                     D[:,k]=copy.deepcopy(D_k)
-                    dD_k=(D_k-Dk_0)
+                    dD_k=(D_k-D_k0)
                     df=-(2*Ck.T@dD_k+AAt[k,k]*np.sum(dD_k**2))
                     if params.debug_armijo:
                         print("df="+str(df)+" target="+str(acceptable_decrease))
@@ -109,7 +109,7 @@ def DictUpdate(D0=None,AAt=None,XAt=None,D2=None,params=None):
                         break
                     s=s*params.armijo_b
                     acceptable_decrease=acceptable_decrease*params.armijo_b
-                if d0<0:
+                if df<0:
                     D[:,k]=copy.deepcopy(D_k0)
                     df=0
                 dCost+=df
