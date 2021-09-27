@@ -168,7 +168,7 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
         dD=np.empty(NC,dtype=object)
         print("r="+str(r)+"\n")
         sys.stdout.flush()
-        if r==100:
+        if r==350:#r==300 0.8145392047565965
             print("Start reduce coherence")
             D_all = np.hstack((D[0], D[1], D[2], D[3], D[4]))
             ori_gram = D_all.T @ D_all
