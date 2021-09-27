@@ -6,6 +6,7 @@ from SSDL_GU import *
 from LocalClassifier import *
 from DictUpdate import *
 from MLDLSI2 import *
+from learning_incoherent_dictionary import *
 from sklearn.decomposition import SparseCoder
 from numpy.linalg import norm
 from numpy import linalg as LA
@@ -118,13 +119,13 @@ def Dict_Ini(data,nCol,wayInit):
         exit()
     return D
 
+transform_n_nonzero_coefs=30
 # data = scipy.io.loadmat('clothes5.mat') # 读取mat文件
 data = scipy.io.loadmat('T4.mat') # 读取mat文件
 D_init = scipy.io.loadmat('D_init.mat')['D0_reg'][0] # 读取mat文件
 # print(data.keys())  # 查看mat文件中的所有变量
 train_data=data['train_data']
 train_data_reg=preprocessing.normalize(train_data.T, norm='l2').T
-aa=np.stack((train_data,train_data),axis=1)
 train_Annotation=data['train_Annotation']
 test_data=data['test_data']
 test_data_reg=preprocessing.normalize(test_data.T, norm='l2').T
@@ -201,12 +202,7 @@ for m in range(xmu.shape[0]):
     params.dict_update.xcorr = 1
     params.D0 = D0_reg
     D,A_mean,Dusage,Uk,bk        = MLDLSI2(params)
-    for i in range(D.shape[0]):
-        print(D[i].sum())
-    A_mean_sum=0
-    for index_A in range(A_mean.shape[0]):
-        # print(A_mean[index_A].sum())
-        A_mean_sum=A_mean_sum+A_mean[index_A].sum()
+    scio.savemat('middle_res.mat', {'D': D,'A_mean': A_mean,'Dusage': Dusage,'Uk': Uk,'bk': bk})
     testparam=Params()
     testparam.lambda1=params.model.the_lambda
     testparam.lambda2=0.04

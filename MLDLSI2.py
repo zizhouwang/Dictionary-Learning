@@ -4,6 +4,7 @@ import numpy as np
 from SSDL_GU import *
 from DictUpdate import *
 from li2nsvm_multiclass_lbfgs import *
+from learning_incoherent_dictionary import *
 from sklearn.decomposition import SparseCoder
 from numpy.linalg import norm
 from numpy import linalg as LA
@@ -61,6 +62,7 @@ def GetPrefix(params):
 
 
 def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
+    transform_n_nonzero_coefs=30
     NC=params.D0.shape[0]
     K=np.zeros(NC)
     labelname=np.arange(params.training_labels.shape[0])
@@ -166,6 +168,21 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
         dD=np.empty(NC,dtype=object)
         print("r="+str(r)+"\n")
         sys.stdout.flush()
+        if r==100:
+            print("Start reduce coherence")
+            D_all = np.hstack((D[0], D[1], D[2], D[3], D[4]))
+            ori_gram = D_all.T @ D_all
+            ori_gram -= np.eye(ori_gram.shape[0])
+            ori_coherent = ori_gram.max()
+            coder = SparseCoder(dictionary=D_all.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
+                                transform_algorithm="omp")
+            the_X = (coder.transform(params.training_data.T)).T
+            D_new_all = incoherent(D_all, params.training_data, the_X, 1)
+            new_gram = D_new_all.T @ D_new_all
+            new_gram -= np.eye(new_gram.shape[0])
+            new_coherent = new_gram.max()
+            for i in range(D.shape[0]):
+                D[i] = D_new_all[:, i * transform_n_nonzero_coefs:(i + 1) * transform_n_nonzero_coefs]
         find=np.arange(finished.shape[0])[finished<3]
         if find.shape[0]==0:
             if params.mu_mode[0]<0 and (params.mu0>0 or params.xmu0>0):
@@ -177,6 +194,8 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                 finished[:]=0
             else:
                 break
+        else:
+            pass
         Uk, bk, class_name = li2nsvm_multiclass_lbfgs(A1_sum.T,y, tau)
         temp_z=None
         for c in range(NC):
@@ -323,6 +342,7 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                 cost[r,c]=cost[r,c]+xmu*np.sum(np.sum(xc_2,axis=0))
             if r>0:
                 cost_dif=abs(cost[r-1,c]-cost[r,c])/cost[0,c]#原版本说这里是否应修改
+                print("cost_dif:"+str(cost_dif))
                 if cost_dif<params.min_change:
                     finished[c]=finished[c]+1
                 else:
