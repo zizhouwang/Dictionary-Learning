@@ -119,6 +119,7 @@ def Dict_Ini(data,nCol,wayInit):
         exit()
     return D
 
+atom_n=30
 transform_n_nonzero_coefs=30
 # data = scipy.io.loadmat('clothes5.mat') # 读取mat文件
 data = scipy.io.loadmat('T4.mat') # 读取mat文件
@@ -134,37 +135,35 @@ test_Annotation.dtype="int8"
 testNum=test_data.shape[1]
 labelNum=test_Annotation.shape[0]
 featureDim=test_data.shape[0]
-atom_n=30
 atomNum=[atom_n,atom_n,atom_n,atom_n,atom_n]
-D0=np.empty((labelNum,train_data.shape[0],atom_n))
-D0_reg=np.empty((labelNum,train_data.shape[0],atom_n))
-# Dic_reg_para=np.empty((labelNum,atom_n))
+# D0=np.empty((labelNum,train_data.shape[0],atom_n))
+D0_reg=np.random.randn(labelNum,train_data.shape[0],atom_n)
 xmu=np.array([0.05])
 RankingLoss=np.zeros((xmu.shape[0]))
 Average_Precision=np.zeros((xmu.shape[0]))
 Coverage=np.zeros((xmu.shape[0]))
 OneError=np.zeros((xmu.shape[0]))
 for m in range(xmu.shape[0]):
-    for i in range(labelNum):
-        cdat=train_data_reg[:,train_Annotation[i,:]==1]
-        nRow,nCol=cdat.shape
-        if atomNum[i]>min(featureDim,cdat.shape[1]):
-            wayInit1="pca"
-            wayInit2="random"
-            atomNum1=min(featureDim,cdat.shape[1])
-            atomNum2=atomNum[i]-atomNum1
-            dict1=Dict_Ini(cdat,atomNum1,wayInit1)
-            dict2=Dict_Ini(cdat,atomNum2,wayInit2)
-            the_dict=np.hstack((dict1,dict2))
-        else:
-            wayInit="pca"
-            the_dict=Dict_Ini(cdat,atomNum[i],wayInit)
-        D0[i]=the_dict
-        the_dict=preprocessing.normalize(the_dict.T, norm='l2').T
-        # aa=abs(np.dot(the_dict.T,the_dict))
-        # for i in range(aa.shape[0]):
-        #     aa[i][i]=0
-        D0_reg[i]=the_dict
+    # for i in range(labelNum):
+    #     cdat=train_data_reg[:,train_Annotation[i,:]==1]
+    #     nRow,nCol=cdat.shape
+    #     if atomNum[i]>min(featureDim,cdat.shape[1]):
+    #         wayInit1="pca"
+    #         wayInit2="random"
+    #         atomNum1=min(featureDim,cdat.shape[1])
+    #         atomNum2=atomNum[i]-atomNum1
+    #         dict1=Dict_Ini(cdat,atomNum1,wayInit1)
+    #         dict2=Dict_Ini(cdat,atomNum2,wayInit2)
+    #         the_dict=np.hstack((dict1,dict2))
+    #     else:
+    #         wayInit="pca"
+    #         the_dict=Dict_Ini(cdat,atomNum[i],wayInit)
+    #     D0[i]=the_dict
+    #     the_dict=preprocessing.normalize(the_dict.T, norm='l2').T
+    #     D0_reg[i]=the_dict
+    # for i in range(labelNum):
+    #     D0_reg[i,:,:D_init[i].shape[1]]=copy.deepcopy(D_init[i])
+    #     D0_reg[i]=preprocessing.normalize(D0_reg[i].T, norm='l2').T
     D0_reg=copy.deepcopy(D_init)
     params=Params()
     params.model=DefaultModelParams()

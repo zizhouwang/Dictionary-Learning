@@ -15,6 +15,7 @@ import math
 import os
 import cv2
 import copy
+from numpy.matlib import repmat
 
 def incoherent(the_D,the_Y,the_X,nIter):
     iIter=0
@@ -45,6 +46,59 @@ def incoherent(the_D,the_Y,the_X,nIter):
         part_D=np.dot(np.sqrt(eigenvalues),Q.T)
         for i in range(the_D.shape[0]):
             the_D[i,:]=part_D[i%part_D.shape[0],:]
+        the_D=preprocessing.normalize(the_D.T, norm='l2').T
+        the_C=np.dot(the_Y,np.dot(the_D,the_X).T)
+        the_u,the_s,the_vt=LA.svd(the_C)
+        the_W=np.dot(the_vt.T,the_u.T)
+        the_D=np.dot(the_W,the_D)
+        gram=np.dot(the_D.T,the_D)
+        for i in range(gram.shape[0]):
+            gram[i][i]=-gram[i][i]
+        current_u=gram.max()
+        for i in range(gram.shape[0]):
+            gram[i][i]=-gram[i][i]
+        print("u0:"+str(u0))
+        print()
+        print("current_u:"+str(current_u))
+        print()
+        sys.stdout.flush()
+        iIter+=1
+        # the_K=np.linalg.diag
+    return the_D
+
+def incoherent_3000(the_D,the_Y,the_X,nIter):
+    all_atom_num=the_D.shape[1]
+    iIter=0
+    u0=0.7
+    the_D=repmat(the_D, 1, 20)
+    gram=np.dot(the_D.T,the_D)
+    for i in range(gram.shape[0]):
+        gram[i][i]=-gram[i][i]
+    current_u=gram.max()
+    for i in range(gram.shape[0]):
+        gram[i][i]=-gram[i][i]
+    u0=current_u*0.9
+    print("u0:"+str(u0))
+    print()
+    print("current_u:"+str(current_u))
+    print()
+    while iIter<nIter and current_u>u0:
+        the_K=copy.deepcopy(gram)
+        the_K[the_K<-u0]=-u0
+        the_K[the_K>u0]=u0
+        for i in range(the_K.shape[0]):
+            the_K[i][i]=1.
+        gram=the_K
+        eigenvalues,Q=LA.eig(gram)
+        eigenvalues.dtype='float'
+        Q.dtype='float'
+        max_to_min_index=eigenvalues.argsort()[::-1]
+        Q=Q[:,max_to_min_index]
+        eigenvalues=eigenvalues[max_to_min_index]
+        eigenvalues=np.diag(eigenvalues)
+        eigenvalues=eigenvalues[:the_D.shape[0],:]
+        eigenvalues[eigenvalues<0]=0
+        the_D=np.dot(np.sqrt(eigenvalues),Q.T[:,:all_atom_num])
         the_D=preprocessing.normalize(the_D.T, norm='l2').T
         the_C=np.dot(the_Y,np.dot(the_D,the_X).T)
         the_u,the_s,the_vt=LA.svd(the_C)

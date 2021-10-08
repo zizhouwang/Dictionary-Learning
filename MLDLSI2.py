@@ -168,7 +168,11 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
         dD=np.empty(NC,dtype=object)
         print("r="+str(r)+"\n")
         sys.stdout.flush()
-        if r==350:#r==300 0.8145392047565965
+        if r==221:#old r==300 0.8145392047565965
+            #70 0.8076830174656265
+            #100 0.8106373095503535
+            #130 0.8160720921590491
+            #220 0.8134720921590491
             print("Start reduce coherence")
             D_all = np.hstack((D[0], D[1], D[2], D[3], D[4]))
             ori_gram = D_all.T @ D_all
@@ -177,7 +181,7 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
             coder = SparseCoder(dictionary=D_all.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
                                 transform_algorithm="omp")
             the_X = (coder.transform(params.training_data.T)).T
-            D_new_all = incoherent(D_all, params.training_data, the_X, 1)
+            D_new_all = incoherent_3000(D_all, params.training_data, the_X, 1)
             new_gram = D_new_all.T @ D_new_all
             new_gram -= np.eye(new_gram.shape[0])
             new_coherent = new_gram.max()
