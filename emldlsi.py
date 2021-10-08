@@ -165,6 +165,8 @@ for m in range(xmu.shape[0]):
     #     D0_reg[i,:,:D_init[i].shape[1]]=copy.deepcopy(D_init[i])
     #     D0_reg[i]=preprocessing.normalize(D0_reg[i].T, norm='l2').T
     D0_reg=copy.deepcopy(D_init)
+    # for class_index in range(labelNum):
+    #     D0_reg[class_index] = train_data_reg[:,train_Annotation[class_index]==1][:,:atom_n]
     params=Params()
     params.model=DefaultModelParams()
     params.model.lambda2=0.003
