@@ -22,47 +22,48 @@ from gurobipy import GRB
 import scipy.sparse as sp
 from gurobipy import *
 
-# try:
-
-# Create a new model
 m = gp.Model("matrix1")
-
-# Create variables
-# x = m.addMVar(shape=3, vtype=GRB.CONTINUOUS, name="x")
-# x = m.addMVar(shape=3, vtype=GRB.INTEGER, name="x")
-
-y=np.random.randn(3)
-D_all=np.random.randn(3,100) #字典矩阵D
+y=np.random.rand(3)
+y=preprocessing.normalize(y.reshape(1,-1), norm='l2')[0]
+D_all=np.random.rand(3,100) #字典矩阵D
+D_all=preprocessing.normalize(D_all.T, norm='l2').T
 obj=QuadExpr()
 M=1e+8
-nonzero_num=LinExpr()
 T=30
+nonzero_num=LinExpr()
+y_pres=np.empty(3,dtype=object)
+for i in range(3):
+    y_pres[i]=QuadExpr()
+    y_pres[i]+=-y[i]
 for i in range(100):
-# Set objective
-    y_pre=QuadExpr()
+    z = m.addVar(vtype=GRB.BINARY, name="z" + str(i))
+    x = m.addVar(vtype=GRB.CONTINUOUS, name="x" + str(i))
+    m.addConstr(-z * M <= x, name="m_x" + str(i) + "1")
+    m.addConstr(z * M >= x, name="m_x" + str(i) + "2")
     for j in range(3):
-        x=m.addVar(vtype=GRB.CONTINUOUS, name="x"+str(i)+str(j))
-        z=m.addVar(vtype=GRB.BINARY, name="z"+str(i)+str(j))
-        m.addConstr(-z*M<=x,name="m_x"+str(i)+str(j)+"1")
-        m.addConstr(z*M>=x,name="m_x"+str(i)+str(j)+"2")
-        nonzero_num+=z
-        y_pre+=y[j]-D_all[j,i]*x
-    # d_p = D_all[:,i]
-    # y_pre=d_p@x
+        y_pres[j]+=D_all[j,i]*x
+    nonzero_num+=z
+for i in range(3):
     v=m.addVar(name="v"+str(i))
-    m.addConstr(v<=y_pre,name="v_c"+str(i)+"1")
-    m.addConstr(v>=y_pre,name="v_c"+str(i)+"2")
-    m.addConstr(nonzero_num<=T,name="t"+str(i))
+    m.addConstr(v<=y_pres[i],name="v_c"+str(i)+"1")
+    m.addConstr(v>=y_pres[i],name="v_c"+str(i)+"2")
     obj+=v*v
-    m.setObjective(obj, GRB.MINIMIZE)
+m.addConstr(nonzero_num<=T,name="t")
+m.setObjective(obj, GRB.MINIMIZE)
 
-# Optimize model
 m.optimize()
-
-print('Obj: %g' % m.objVal)
-
-# except gp.GurobiError as e:
-#     print('Error code ' + str(e.errno) + ": " + str(e))
-#
-# except AttributeError:
-#     print('Encountered an attribute error')
+z_non_zero_all=0
+the_x=np.empty(100)
+for v in m.getVars():
+    try:
+        # if v.varName[0]=="v":
+        #     continue
+        print('%s' % (v.varName))
+        if v.varName[0]=="z":
+            z_non_zero_all+=np.sign(abs(v.x))
+        if v.varName[0]=="x":
+            the_x[int(v.varName[1:])]=v.x
+        print('%g' % (v.x))
+    except AttributeError:
+        print('Encountered an attribute error')
+pass
