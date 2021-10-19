@@ -3,6 +3,7 @@ import time
 import pdb
 import numpy as np
 from SSDL_GU import *
+from MIQP import *
 from sklearn.decomposition import SparseCoder
 from numpy.linalg import norm
 import sys
@@ -83,7 +84,7 @@ best_accuracy=-1
 
 for a2 in range(1):
     for start_change in range(1):
-        a2=10
+        # a2=10
         # data = scipy.io.loadmat('clothes5.mat') # 读取mat文件
         data = scipy.io.loadmat('T4.mat') # 读取mat文件
         # print(data.keys())  # 查看mat文件中的所有变量
@@ -151,6 +152,7 @@ for a2 in range(1):
         coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm="omp")
         # X_test=(coder.transform(Y_test.T)).T
         X_test=transform(D_all,Y_test,transform_n_nonzero_coefs,None)
+        X_test=miqp_ys(D_all,Y_test,transform_n_nonzero_coefs)
         # for i in range(n_classes):
         #     D=D_all[:,i*n_atoms:(i+1)*n_atoms]
         #     coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm="omp")
