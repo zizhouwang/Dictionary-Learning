@@ -19,7 +19,7 @@ import copy
 from learning_incoherent_dictionary import *
 from numpy import random
 
-for a2 in range(100):
+for a2 in range(1):
 
     # data = scipy.io.loadmat('clothes5.mat') # 读取mat文件
     data = scipy.io.loadmat('T4.mat') # 读取mat文件
@@ -109,7 +109,7 @@ for a2 in range(100):
     Cs=np.empty((start_init_number,n_classes*start_init_number))
     D=np.empty((im_vec_len,n_atoms))
     for class_index in range(n_classes):
-        D[:,:start_init_number] = image_vecs[:,inds_of_file_path[class_index][:n_classes*start_init_number]]
+        D[:,:start_init_number] = image_vecs[:,inds_of_file_path[class_index][:start_init_number]]
         # D=random.random(size=(D.shape[0],D.shape[1]))
         D = norm_cols_plus_petit_1(D,c)
         Ds[class_index]=np.copy(D)
@@ -188,32 +188,25 @@ for a2 in range(100):
             Ws=np.dot(new_H_B,new_C)
             As=np.dot(new_Q_B,new_C)
             for j in range(D.shape[1]):
-                Ws=Ws[:,j]/(np.sum(D[:,j]**2))
-                As=As[:,j]/(np.sum(D[:,j]**2))
+                Ws[:,j]=Ws[:,j]/(np.sum(D[:,j]**2))
+                As[:,j]=As[:,j]/(np.sum(D[:,j]**2))
             D=preprocessing.normalize(D.T, norm='l2').T
             Ds=D
     end_t=time.time()
     print("train_time : "+str(end_t-start_t))
     sys.stdout.flush()
     D_all=Ds
-    D_all=D_all.transpose((0,2,1))
-    D_all=D_all.reshape(-1,im_vec_len).T
-    D_all=preprocessing.normalize(D_all.T, norm='l2').T
-    coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm="omp")
-    the_X=(coder.transform(image_vecs.T)).T
-    # D_all=incoherent(D_all,image_vecs,the_X,1)
-    D_all=preprocessing.normalize(D_all.T, norm='l2').T
-    np.save("model/D_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2),D_all)
+    np.save("model/D_all_"+py_file_name+"_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2),D_all)
     print("D_all saved")
     W_all=Ws
-    W_all=W_all.transpose((0,2,1))
-    W_all=W_all.reshape(-1,n_classes).T
-    np.save("model/W_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2),W_all)
+    # W_all=W_all.transpose((0,2,1))
+    # W_all=W_all.reshape(-1,n_classes).T
+    np.save("model/W_all_"+py_file_name+"_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2),W_all)
     print("W_all saved")
     A_all=As
-    A_all=A_all.transpose((0,2,1))
-    A_all=A_all.reshape(-1,n_classes*n_atoms).T
-    np.save("model/A_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2),A_all)
+    # A_all=A_all.transpose((0,2,1))
+    # A_all=A_all.reshape(-1,n_classes*n_atoms).T
+    np.save("model/A_all_"+py_file_name+"_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2),A_all)
     print("A_all saved")
 
     np.save(inds_of_file_path_path,inds_of_file_path)
