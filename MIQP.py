@@ -17,10 +17,9 @@ import random
 from numpy.matlib import repmat
 import copy
 import scipy.io as scio
-import gurobipy as gp
-from gurobipy import GRB
 import scipy.sparse as sp
-from gurobipy import *
+# import gurobipy as gp
+# from gurobipy import *
 
 def miqp_ys(the_D,the_Y,T):
     the_X=np.empty((the_D.shape[1],the_Y.shape[1]))

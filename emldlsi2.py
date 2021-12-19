@@ -25,16 +25,6 @@ import scipy.io as scio
 
 class Params:
     pass
-# params=Params()
-# params.model=Params()
-# params.model.lambda2=0.003
-# params.model.lambda1=0.04
-# params.mu0=0.0
-# params.xmu0=0.05
-# params.mu_mode=[-1]
-# pdb.set_trace()
-# for i in range(10,1,-1):
-#     print(i)
 
 def DefaultModelParams():
     params=Params()
@@ -119,25 +109,77 @@ def Dict_Ini(data,nCol,wayInit):
         exit()
     return D
 
+def Separate_data(data,annotation,delete_percent):
+    separated_dimen = 64
+    separated_times = data.shape[0] // separated_dimen + 1
+    data_reg_separated = np.zeros((separated_dimen, separated_times * data.shape[1]))
+    Annotation_separated = np.empty((annotation.shape[0], separated_times * data.shape[1]))
+    for i in range(data.shape[1]):
+        for j in range(separated_times):
+            one_separated = data[:, i][j * separated_dimen:(j + 1) * separated_dimen]
+            data_reg_separated[:one_separated.shape[0], i * separated_times + j] = one_separated
+            Annotation_separated[:, i * separated_times + j] = annotation[:, i]
+    mean_data = np.mean(data, axis=1)
+    mean_distance_data_separated = np.empty(separated_times * data.shape[1])
+    for i in range(data.shape[1]):
+        for j in range(separated_times):
+            one_separated = data[:, i][j * separated_dimen:(j + 1) * separated_dimen]
+            mean_distance_data_separated[i * separated_times + j] = \
+                np.sum(abs(one_separated - mean_data[j * separated_dimen:(j + 1) * separated_dimen]))
+    deleted = np.array([], dtype=int)
+    for i in range(separated_times):
+        chose = np.arange(i, data_reg_separated.shape[1], separated_times)
+        part_m = mean_distance_data_separated[chose]
+        deleted = np.append(deleted, chose[part_m.argsort()[int(part_m.shape[0] * delete_percent):]])
+    # data_reg_separated = np.delete(data_reg_separated, deleted, axis=1)
+    data_reg_separated=preprocessing.normalize(data_reg_separated.T, norm='l2').T
+    # Annotation_separated = np.delete(Annotation_separated, deleted, axis=1)
+    return data_reg_separated,Annotation_separated
+
 atom_n=30
 transform_n_nonzero_coefs=30
-# data = scipy.io.loadmat('clothes5.mat') # 读取mat文件
 data = scipy.io.loadmat('T4.mat') # 读取mat文件
 D_init = scipy.io.loadmat('D_init.mat')['D0_reg'][0] # 读取mat文件
-# print(data.keys())  # 查看mat文件中的所有变量
 train_data=data['train_data']
+mean_data = np.mean(train_data, axis=1)
 train_data_reg=preprocessing.normalize(train_data.T, norm='l2').T
 train_Annotation=data['train_Annotation']
 test_data=data['test_data']
 test_data_reg=preprocessing.normalize(test_data.T, norm='l2').T
 test_Annotation=data['test_Annotation']
 test_Annotation.dtype="int8"
+
+separated_dimen=64
+separated_times=train_data_reg.shape[0]//separated_dimen+1
+train_data_reg,train_Annotation=Separate_data(train_data,train_Annotation,0.5)
+separated_test_times=test_data_reg.shape[0]//separated_dimen+1
+test_data_reg_separated=np.zeros((separated_dimen,separated_test_times*test_data_reg.shape[1]))
+test_Annotation_separated=np.empty((test_Annotation.shape[0],separated_test_times*test_data_reg.shape[1]))
+for i in range(test_data_reg.shape[1]):
+    for j in range(separated_test_times):
+        one_separated=test_data_reg[:,i][j*separated_dimen:(j+1)*separated_dimen]
+        test_data_reg_separated[:one_separated.shape[0],i*separated_test_times+j]=one_separated
+        test_Annotation_separated[:,i*separated_test_times+j]=test_Annotation[:,i]
+test_data_reg=test_data_reg_separated
+test_data_reg=preprocessing.normalize(test_data_reg.T, norm='l2').T
+# test_Annotation=test_Annotation_separated
+# test_data_reg,test_Annotation=Separate_data(test_data_reg,test_Annotation,0.5)
+
 testNum=test_data.shape[1]
 labelNum=test_Annotation.shape[0]
 featureDim=test_data.shape[0]
 atomNum=[atom_n,atom_n,atom_n,atom_n,atom_n]
-# D0=np.empty((labelNum,train_data.shape[0],atom_n))
-D0_reg=np.random.randn(labelNum,train_data.shape[0],atom_n)
+# D0=np.empty((labelNum,train_data_reg.shape[0],atom_n))
+D0_reg=np.random.randn(labelNum,train_data_reg.shape[0],atom_n)
+D0_reg=np.random.rand(labelNum,train_data_reg.shape[0],atom_n)
+for class_index in range(labelNum):
+    # chose_ind=np.arange(np.sum([train_Annotation[class_index]==1]))
+    # np.random.shuffle(chose_ind)
+    # chose_ind=chose_ind[:atom_n]
+    # D0_reg[class_index] = train_data_reg[:,train_Annotation[class_index]==1][:,chose_ind]
+    D0_reg[class_index] = preprocessing.normalize(D0_reg[class_index].T, norm='l2').T
+D_random_init=copy.deepcopy(D0_reg)
+time_ns=time.time_ns()
 xmu=np.array([0.05])
 RankingLoss=np.zeros((xmu.shape[0]))
 Average_Precision=np.zeros((xmu.shape[0]))
@@ -164,7 +206,7 @@ for m in range(xmu.shape[0]):
     # for i in range(labelNum):
     #     D0_reg[i,:,:D_init[i].shape[1]]=copy.deepcopy(D_init[i])
     #     D0_reg[i]=preprocessing.normalize(D0_reg[i].T, norm='l2').T
-    D0_reg=copy.deepcopy(D_init)
+    # D0_reg=copy.deepcopy(D_init)
     # for class_index in range(labelNum):
     #     D0_reg[class_index] = train_data_reg[:,train_Annotation[class_index]==1][:,:atom_n]
     params=Params()
@@ -178,11 +220,11 @@ for m in range(xmu.shape[0]):
 
 
 
-    params.max_iter=1000
+    params.max_iter=400
 
 
 
-    params.min_change=1e-5
+    params.min_change=1e-4
     params.batch_size=0
     params.test_size=0
     params.resume=False
@@ -211,9 +253,26 @@ for m in range(xmu.shape[0]):
     toutput1,toutput2,toutput3 = LocalClassifier(train_data_reg,D,A_mean,testparam,Uk,bk,params.model.lambda1)
     test_Annotation= 2*test_Annotation-1
     # RankingLoss[m]=Ranking_loss(output1,test_Annotation)
+    new_output1=np.empty((output1.shape[0],output1.shape[1]//separated_times))
+    for i in range(output1.shape[1]//separated_times):
+        weight=np.empty(separated_times)
+        for j in range(separated_times):
+            one_separated = test_data_reg[:, i*separated_times+j]
+            mean_data_part=mean_data[j * separated_dimen:(j + 1) * separated_dimen]
+            weight[j] = 1/(np.sum(abs(one_separated[:mean_data_part.shape[0]] - mean_data_part)))
+        weight_all=np.sum(weight)
+        weighted_res=np.zeros(output1.shape[0])
+        for j in range(separated_times):
+            one_separated = output1[:, i*separated_times+j]
+            weighted_res+=one_separated*weight[j]/weight_all
+        new_output1[:,i]=weighted_res
+    output1=new_output1
     Average_Precision[m],Average_Precision1=Average_precision(output1,test_Annotation)
     print()
     print(Average_Precision[m])
+    if Average_Precision[m]>0.815:
+        scio.savemat('D_init_'+str(Average_Precision[m])+'.mat', {'D': D_random_init})
+        scio.savemat('middle_res_'+str(Average_Precision[m])+'.mat', {'D': D,'A_mean': A_mean,'Dusage': Dusage,'Uk': Uk,'bk': bk})
     # Coverage[m]=coverage(output1,test_Annotation)
     # OneError[m]=One_error(output1,test_Annotation)
 # result_data=[xmu,Average_Precision,Coverage,OneError,RankingLoss]

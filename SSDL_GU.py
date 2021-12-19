@@ -29,6 +29,33 @@ premature = """ Orthogonal matching pursuit ended prematurely due to linear
 dependence in the dictionary. The requested precision might not have been met.
 """
 
+def Separate_data(data,annotation,delete_percent):
+    separated_dimen = 64
+    separated_times = data.shape[0] // separated_dimen + 1
+    data_reg_separated = np.zeros((separated_dimen, separated_times * data.shape[1]))
+    Annotation_separated = np.empty((annotation.shape[0], separated_times * data.shape[1]))
+    for i in range(data.shape[1]):
+        for j in range(separated_times):
+            one_separated = data[:, i][j * separated_dimen:(j + 1) * separated_dimen]
+            data_reg_separated[:one_separated.shape[0], i * separated_times + j] = one_separated
+            Annotation_separated[:, i * separated_times + j] = annotation[:, i]
+    mean_data = np.mean(data, axis=1)
+    mean_distance_data_separated = np.empty(separated_times * data.shape[1])
+    for i in range(data.shape[1]):
+        for j in range(separated_times):
+            one_separated = data[:, i][j * separated_dimen:(j + 1) * separated_dimen]
+            mean_distance_data_separated[i * separated_times + j] = \
+                np.sum(abs(one_separated - mean_data[j * separated_dimen:(j + 1) * separated_dimen]))
+    deleted = np.array([], dtype=int)
+    for i in range(separated_times):
+        chose = np.arange(i, data_reg_separated.shape[1], separated_times)
+        part_m = mean_distance_data_separated[chose]
+        deleted = np.append(deleted, chose[part_m.argsort()[int(part_m.shape[0] * delete_percent):]])
+    data_reg_separated = np.delete(data_reg_separated, deleted, axis=1)
+    data_reg_separated=preprocessing.normalize(data_reg_separated.T, norm='l2').T
+    Annotation_separated = np.delete(Annotation_separated, deleted, axis=1)
+    return data_reg_separated,Annotation_separated
+
 def load_img(path):
     im=Image.open(path)    # 读取文件
     # img = cv2.imread(path)
