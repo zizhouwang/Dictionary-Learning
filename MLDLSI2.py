@@ -201,8 +201,6 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
         Uk, bk, class_name = li2nsvm_multiclass_lbfgs(A1_sum.T,y, tau)
         temp_z=None
         for c in range(NC):
-            if r>0 and c>0:
-                a=1
             Dc=D[c]
             D2=np.zeros((M,int(np.sum(K)-K[c])))
             D2_weight=np.zeros((M,int(np.sum(K)-K[c])))
@@ -267,10 +265,6 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                     if c!=0:
                         for k in range(c):
                             num=num+DataNum[k]
-                    if r>0 and c==0:
-                        a=1
-                    if r>0 and c>0:
-                        a=1
                     for j in range(int(DataNum[c])):
                         A1[c][:,j]=A1_sum[:,num]
                         num+=1
@@ -301,23 +295,23 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                 if np.sum(Dc*Dc,axis=0).max()>(1+sqrt(np.spacing(1))):
                     print("error np.sum(Dc*Dc,axis=0).max()>(1+sqrt(eps))")
                     pdb.set_trace()
-                if params.discard_unused_atoms>0:
-                    kt_usage[c]=(Dusage[c]+0.5)/(accumulated_N[c]+1)
-                    thres=params.discard_unused_atoms
-                    found_arr=kt_usage[c]
-                    dead_atoms=np.arange(found_arr.shape[0])[found_arr<thres]
-                    if dead_atoms.shape[0]>=Dc.shape[1]:
-                        print('All atoms were discarded! Consider reducing threshold.')
-                        params.discard_unused_atoms = params.discard_unused_atoms / 10
-                    aux=np.arange(Xb.shape[1])
-                    random.shuffle(aux)
-                    aux = aux[0:min(Dc.shape[1],Xb.shape[1],dead_atoms.shape[0])]
-                    if aux.shape[0]>0:
-                        Dc[:,dead_atoms[:aux.shape[0]]]=preprocessing.normalize(Xb[:,aux].T, norm='l2').T
-                    Dusage[c][dead_atoms]=Nc/2.
-                    if dead_atoms.shape[0]>0:
-                        print('reset '+str(dead_atoms.shape[0]+' atoms:'))
-                        #???原版本这里一堆输出 别的啥也没有
+                # if params.discard_unused_atoms>0:
+                #     kt_usage[c]=(Dusage[c]+0.5)/(accumulated_N[c]+1)
+                #     thres=params.discard_unused_atoms
+                #     found_arr=kt_usage[c]
+                #     dead_atoms=np.arange(found_arr.shape[0])[found_arr<thres]
+                #     if dead_atoms.shape[0]>=Dc.shape[1]:
+                #         print('All atoms were discarded! Consider reducing threshold.')
+                #         params.discard_unused_atoms = params.discard_unused_atoms / 10
+                #     aux=np.arange(Xb.shape[1])
+                #     random.shuffle(aux)
+                #     aux = aux[0:min(Dc.shape[1],Xb.shape[1],dead_atoms.shape[0])]
+                #     if aux.shape[0]>0:
+                #         Dc[:,dead_atoms[:aux.shape[0]]]=preprocessing.normalize(Xb[:,aux].T, norm='l2').T
+                #     Dusage[c][dead_atoms]=Nc/2.
+                #     if dead_atoms.shape[0]>0:
+                #         print('reset '+str(dead_atoms.shape[0]+' atoms:'))
+                #         #???原版本这里一堆输出 别的啥也没有
                 dD[c]=Dc-D[c]
                 dDn[c]=LA.norm(dD[c][:])
                 D[c]=Dc

@@ -47,7 +47,7 @@ clo_func_0 = outer_func()
 clo_func_0('clo_func_0')
 aa=clo_func_0('clo_func_0')
 clo_func_0('clo_func_0')
-
+aa=1
 def DefaultModelParams():
     params=Params()
     params.reg_mode = 2; 
@@ -194,7 +194,42 @@ for m in range(xmu.shape[0]):
     params.dict_update     = DictUpdate()
     params.dict_update.xcorr = 1
     params.D0 = D0_reg
-    D,A_mean,Dusage,Uk,bk        = MLDLSI2(params)
+    X=np.empty(labelNum,dtype=object)
+    DataNum=np.zeros(labelNum,dtype=int)
+    for i in range(labelNum):
+        X[i] = copy.deepcopy(params.training_data[:, params.training_labels[i, :] == 1])
+        DataNum[i] = X[i].shape[1]
+    labelsb=copy.deepcopy(params.training_labels)
+    labelsb = labelsb*2-1
+    NumLabels=int(np.sum(np.sum(labelsb,axis=0).T))
+    y = np.zeros(NumLabels)
+    for i in range(labelNum):
+        num = 0
+        if i != 0:
+            for k in range(i):
+                num = num + DataNum[k]
+        for j in range(int(DataNum[i])):
+            num = int(num)
+            y[num] = i
+            num += 1
+    train_func1=MLDLSI2(params,y)
+    train_func2=None
+    D=None
+    A_mean=None
+    Dusage=None
+    Uk=None
+    bk=None
+    for r in range(params.max_iter):
+        D,A_mean,Dusage,Uk,bk,A1_sum,y=train_func1(r,False)
+        if r==0:
+            params.training_data   = A1_sum
+            #这里是随机初始化字典
+            !!params.D0=np.random.randn(labelNum,A1_sum.shape[0],atom_n)!!
+            #现在随机初始化字典可以跑起来了 接下来用A1_sum来初始化字典
+            params.D0=???
+            train_func2 = MLDLSI2(params,y)
+        D,A_mean,Dusage,Uk,bk,temp_A1_sum,y=train_func2(r,True,A1_sum)
+    # D,A_mean,Dusage,Uk,bk=MLDLSI2(params)
     scio.savemat('middle_res.mat', {'D': D,'A_mean': A_mean,'Dusage': Dusage,'Uk': Uk,'bk': bk})
     testparam=Params()
     testparam.lambda1=params.model.the_lambda
