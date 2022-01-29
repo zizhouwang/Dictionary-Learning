@@ -84,13 +84,11 @@ best_accuracy=-1
 
 for a2 in range(1):
     for start_change in range(1):
-        # a2=10
-        # data = scipy.io.loadmat('clothes5.mat') # 读取mat文件
         data = scipy.io.loadmat('T4.mat') # 读取mat文件
         # print(data.keys())  # 查看mat文件中的所有变量
         image_vecs=data['test_data']
         image_vecs=preprocessing.normalize(image_vecs.T, norm='l2').T
-        image_vecs=norm_Ys(image_vecs)
+        # image_vecs=norm_Ys(image_vecs)
         labels_mat=data['test_Annotation']
         labels_mat= 2*labels_mat-1
         # image_vecs=data['train_data']
@@ -120,9 +118,14 @@ for a2 in range(1):
 
         start_init_number=30
         train_number=300
-        update_times=1000
+        update_times=300
         im_vec_len=w*h
         n_atoms = start_init_number
+        transform_n_nonzero_coefs=45
+        if len(sys.argv)>3:
+            update_times=int(sys.argv[1])
+            n_atoms = int(sys.argv[2])
+            transform_n_nonzero_coefs=int(sys.argv[3])
         n_neighbor = 8
         lamda = 0.5
         beta = 1.
@@ -135,14 +138,13 @@ for a2 in range(1):
         n_iter_sp = 50 #number max of iteration in sparse coding
         n_iter_du = 50 # number max of iteration in dictionary update
         n_iter = 15 # number max of general iteration
-        transform_n_nonzero_coefs=30
         n_features = image_vecs.shape[0]
 
         # inds_of_file_path_path='inds_of_file_path_wzz_'+py_file_name+'_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy'
         # inds_of_file_path=np.load(inds_of_file_path_path)
 
-        D_all=np.load("model/D_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2)+".npy")
-        W_all=np.load("model/W_all_"+py_file_name+"_mulD_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2)+".npy")
+        D_all=np.load("model/D_all_"+py_file_name+"_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2)+".npy")
+        W_all=np.load("model/W_all_"+py_file_name+"_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2)+".npy")
 
         average_accuracy=0.
 
@@ -150,9 +152,9 @@ for a2 in range(1):
         test_number=Y_test.shape[1]
         X_test=np.empty((D_all.shape[1],test_number))
         coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm="omp")
-        # X_test=(coder.transform(Y_test.T)).T
-        X_test=transform(D_all,Y_test,transform_n_nonzero_coefs,None)
-        X_test=miqp_ys(D_all,Y_test,transform_n_nonzero_coefs)
+        X_test=(coder.transform(Y_test.T)).T
+        # X_test=transform(D_all,Y_test,transform_n_nonzero_coefs,None)
+        # X_test=miqp_ys(D_all,Y_test,transform_n_nonzero_coefs)
         # for i in range(n_classes):
         #     D=D_all[:,i*n_atoms:(i+1)*n_atoms]
         #     coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm="omp")

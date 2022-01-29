@@ -60,8 +60,117 @@ def GetPrefix(params):
     prefix = path+'model-'+time.strftime('%Y-%m-%d-%H-%M',time.localtime(time.time()))
     return prefix
 
-def MLDLSI2(params,y):#[D,A1_mean,Dusage,Uk,bk]
-    transform_n_nonzero_coefs=30
+def RLSDLA(n_atoms,transform_n_nonzero_coefs):
+    data = scipy.io.loadmat('T4.mat')  # 读取mat文件
+    image_vecs = data['train_data']
+    labels_mat = data['train_Annotation']
+    n_classes = labels_mat.shape[0]
+    DataXb=np.empty((image_vecs.shape[0],0))
+    for i in range(n_classes):
+        DataXb=np.hstack((DataXb,copy.deepcopy(image_vecs[:,labels_mat[i,:]==1])))
+    image_vecs=DataXb
+    image_vecs = preprocessing.normalize(image_vecs.T, norm='l2').T
+    # image_vecs = norm_Ys(image_vecs)
+    t = time.time()
+
+    np.random.seed(int(t) % 100)
+    classes = np.arange(n_classes)
+    w = 54
+    h = 46
+
+    py_file_name = "clothes"
+
+    update_times = 10
+    im_vec_len = w * h
+    n_neighbor = 8
+    lamda = 0.5
+    beta = 1.
+    gamma = 1.
+    mu = 2. * gamma
+    r = 2.
+    c = 1.
+
+    seed = 0  # to save the way initialize dictionary
+    n_iter_sp = 50  # number max of iteration in sparse coding
+    n_iter_du = 50  # number max of iteration in dictionary update
+    n_iter = 15  # number max of general iteration
+    n_features = image_vecs.shape[0]
+    n_data = image_vecs.shape[1]
+
+    """ Start the process, initialize dictionary """
+    Ds = np.empty((n_classes, im_vec_len, n_atoms))
+    Bs = np.empty((im_vec_len, n_atoms))
+    Cs = np.empty((n_atoms, n_atoms))
+    D = np.empty((im_vec_len, n_atoms))
+    # for class_index in range(n_classes):
+    #     D[:,:start_init_number] = image_vecs[:,inds_of_file_path[class_index][:start_init_number]]
+    #     # D=random.random(size=(D.shape[0],D.shape[1]))
+    #     D = norm_cols_plus_petit_1(D,c)
+    #     Ds[class_index]=copy.deepcopy(D)
+    # D=Ds.transpose((0,2,1)).reshape(-1,im_vec_len).T
+    D = np.random.rand(im_vec_len, n_atoms)
+
+
+    D=scipy.io.loadmat('D_random_init.mat')['D_init']
+
+
+    D = preprocessing.normalize(D.T, norm='l2').T
+    Ds = D
+    print("initializing classifier ... done")
+    start_t = time.time()
+
+    Y_indexs = np.arange(image_vecs.shape[1])
+    random.shuffle(Y_indexs)
+
+
+    Y_indexs=scipy.io.loadmat('Y_indexs.mat')['Y_indexs'][0]
+
+
+    Y_indexs_part = Y_indexs[:n_atoms]
+    Y_init = image_vecs[:, Y_indexs_part]
+    coder = SparseCoder(dictionary=D.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
+                        transform_algorithm="omp")
+    X_single = np.eye(D.shape[1])
+    # X_single=(coder.transform(Y_init.T)).T
+    Bs = np.dot(Y_init, X_single.T)
+    Cs = np.linalg.inv(np.dot(X_single, X_single.T))
+
+    def train_one_time(i):
+        if i % 10 == 0:
+            # print(i)
+            sys.stdout.flush()
+        coder = SparseCoder(dictionary=D.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
+                            transform_algorithm="omp")
+        the_B = Bs
+        the_C = Cs
+        im_vec = image_vecs[:, i%n_data]
+        new_y = np.array(im_vec, dtype=float)
+        new_y = new_y.reshape(n_features, 1)
+        new_x = (coder.transform(new_y.T)).T
+        # new_x=transform(D,new_y,transform_n_nonzero_coefs)
+        new_B = the_B + np.dot(new_y, new_x.T)
+        new_C = the_C - (np.matrix(the_C) * np.matrix(new_x) * np.matrix(new_x.T) * np.matrix(the_C)) / (
+                    np.matrix(new_x.T) * np.matrix(the_C) * np.matrix(
+                new_x) + 1)  # matrix inversion lemma(Woodbury matrix identity)
+        Bs[:] = new_B
+        Cs[:] = new_C
+        new_D = np.dot(new_B, new_C)
+        D_diff=new_D-D
+        D[:] = copy.deepcopy(new_D)
+        Ds[:] = D
+        Ds[:] = preprocessing.normalize(Ds.T, norm='l2').T
+        # print(abs(D_diff).max())
+        # print(abs(D_diff).mean())
+        # print()
+        # coder = SparseCoder(dictionary=Ds.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
+        #                     transform_algorithm="omp")
+        # X_all = (coder.transform(image_vecs.T)).T
+        # return Ds,X_all
+        return Ds
+    return train_one_time,copy.deepcopy(D),copy.deepcopy(Y_indexs_part)
+
+def MLDLSI2(params,y,atom_n):#[D,A1_mean,Dusage,Uk,bk]
+    transform_n_nonzero_coefs=atom_n
     NC=params.D0.shape[0]
     K=np.zeros(NC)
     labelname=np.arange(params.training_labels.shape[0])
@@ -119,8 +228,8 @@ def MLDLSI2(params,y):#[D,A1_mean,Dusage,Uk,bk]
     binit=np.zeros(NC)
     labelsb = labelsb*2-1
     NumLabels=int(np.sum(np.sum(labelsb,axis=0).T))
-    A1_sum=np.ones((30,NumLabels))
-    A1_ini=np.ones((30,NumLabels))
+    A1_sum=np.ones((atom_n,NumLabels))
+    A1_ini=np.ones((atom_n,NumLabels))
     Uk = Uinit
     bk = binit
     lambda1  = 2e-3
@@ -197,12 +306,14 @@ def MLDLSI2(params,y):#[D,A1_mean,Dusage,Uk,bk]
                     params.mu_mode[1]=params.mu_mode[1]+params.mu_mode[0]
                 finished[:]=0
             else:
-                return D,A1_mean,Dusage,Uk,bk,A1_sum,y
+                return D,A1_mean,Dusage,Uk,bk,A1_sum,y,True
         else:
             pass
         if is_last_layer:
             pass
-        Uk[:], bk[:], class_name = li2nsvm_multiclass_lbfgs(A1_sum.T,y, tau)
+        Uk[:], bk[:] = li2nsvm_multiclass_lbfgs(A1_sum.T,y, tau)
+        # except AttributeError:
+        #     a=1
         temp_z=None
         for c in range(NC):
             Dc=D[c]
@@ -325,7 +436,7 @@ def MLDLSI2(params,y):#[D,A1_mean,Dusage,Uk,bk]
                 cost[r,c]=cost[r,c]+xmu*np.sum(np.sum(xc_2,axis=0))
             if r>0:
                 cost_dif=abs(cost[r-1,c]-cost[r,c])/cost[0,c]#原版本说这里是否应修改
-                print("cost_dif:"+str(cost_dif))
+                # print("cost_dif:"+str(cost_dif))
                 if cost_dif<params.min_change:
                     finished[c]=finished[c]+1
                 else:
@@ -335,5 +446,5 @@ def MLDLSI2(params,y):#[D,A1_mean,Dusage,Uk,bk]
         pass
         #save('xin','Uk','D','AAt','XAt','Dusage','xc','mean_coherence','max_coherence','mean_cross_coherence','max_cross_coherence','finished','r','l1_energy','new_energy','acciter','cost');
         #保存为xin.mat
-        return D,A1_mean,Dusage,Uk,bk,A1_sum,y
+        return D,A1_mean,Dusage,Uk,bk,A1_sum,y,False
     return train_one_time

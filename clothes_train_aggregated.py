@@ -15,13 +15,10 @@ from PIL import Image
 import math
 import os
 import cv2
-import copy
 from learning_incoherent_dictionary import *
 from numpy import random
 
 for a2 in range(1):
-
-    # data = scipy.io.loadmat('clothes5.mat') # 读取mat文件
     data = scipy.io.loadmat('T4.mat') # 读取mat文件
     # print(data.keys())  # 查看mat文件中的所有变量
     image_vecs=data['train_data']
@@ -29,23 +26,21 @@ for a2 in range(1):
     labels_mat=labels_mat*2-1
     change_num=1e-7
     image_vecs=preprocessing.normalize(image_vecs.T, norm='l2').T
-    image_vecs=norm_Ys(image_vecs)
-    labels_index=np.empty((labels_mat.shape[0],labels_mat.shape[1]))
-    labels_index[:]=-1
+    # image_vecs=norm_Ys(image_vecs)
     images_count=np.empty((5),dtype=int)
     for i in range(labels_mat.shape[0]):
         one_label_mat=labels_mat[i]
         one_labels_index=np.where(one_label_mat==1)[0]
-        labels_index[i,:one_labels_index.shape[0]]=one_labels_index
         images_count[i]=one_labels_index.shape[0]
+    # for i in range(labels_mat.shape[1]):
+    #     new_label=np.where(labels_mat[:, i] == 1)[0][-1]
+    #     labels_mat[:,i]=0
+    #     labels_mat[new_label,i]=1
     t=time.time()
 
     np.random.seed(int(t)%100)
-    n_classes=labels_index.shape[0]
+    n_classes=labels_mat.shape[0]
     classes=np.arange(n_classes)
-    # ind_to_lab_dir={0:"仫佬族",1:"纳西族",2:"怒族",3:"普米族",4:"羌族",5:"撒拉族",6:"畲族"}
-    lab_to_ind_dir={0:0,1:1,2:2,3:3,4:4}
-    ind_to_lab_dir={0:0,1:1,2:2,3:3,4:4}
     w=54
     h=46
 
@@ -53,9 +48,10 @@ for a2 in range(1):
 
     start_init_number=30
     train_number=300
-    update_times=1000
+    update_times=300
     im_vec_len=w*h
-    n_atoms = start_init_number*1
+    n_atoms = 300
+    transform_n_nonzero_coefs=45
     n_neighbor = 8
     lamda = 0.5
     beta = 1.
@@ -68,56 +64,29 @@ for a2 in range(1):
     n_iter_sp = 50 #number max of iteration in sparse coding
     n_iter_du = 50 # number max of iteration in dictionary update
     n_iter = 15 # number max of general iteration
-    transform_n_nonzero_coefs=30
     n_features = image_vecs.shape[0]
+    n_data = image_vecs.shape[1]
 
-    inds_of_file_path_path='model/inds_of_file_path_aggregated_wzz_'+py_file_name+'_'+str(w)+'_'+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy'
-    if os.path.isfile(inds_of_file_path_path):
-        inds_of_file_path=np.load(inds_of_file_path_path)
-        for class_index in classes:
-            labels_of_one_class=inds_of_file_path[class_index][:images_count[class_index]]
-            # if i==34 or i==39:    #need to change label rank
-            if class_index==34:    #need to change label rank
-                labels_of_one_class.sort()
-                # np.random.shuffle(labels_of_one_class)
-            if labels_of_one_class.shape[0]<start_init_number:
-                print("某个类的样本不足，程序暂停")
-                pdb.set_trace()
-            inds_of_file_path[class_index][:images_count[class_index]]=labels_of_one_class
-    else:
-        inds_of_file_path=np.empty((n_classes,labels_index.shape[1]),dtype=int)
-        inds_of_file_path[:]=-1
-        for class_index in classes:
-            labels_of_one_class=labels_index[class_index][:images_count[class_index]]
-            if labels_of_one_class.shape[0]<start_init_number:
-                print("某个类的样本不足，程序暂停")
-                pdb.set_trace()
-            inds_of_file_path[class_index][:images_count[class_index]]=labels_of_one_class
-    class_num=np.empty(n_classes)
-    for class_index in range(n_classes):
-        class_num[class_index]=np.sum(inds_of_file_path[class_index]>0)
-        for j in range(inds_of_file_path[class_index].shape[0]):
-            if inds_of_file_path[class_index][j]==-1:
-                inds_of_file_path[class_index][j]=random.randint(0,class_num[class_index]-1)
     """ Start the process, initialize dictionary """
     Ds=np.empty((n_classes,im_vec_len,n_atoms))
-    Ws=np.empty((n_classes,n_classes*start_init_number))
-    As=np.empty((n_atoms*n_classes,n_classes*start_init_number))
-    Bs=np.empty((im_vec_len,n_classes*start_init_number))
-    H_Bs=np.empty((n_classes,n_classes*start_init_number))
-    Q_Bs=np.empty((n_atoms*n_classes,n_classes*start_init_number))
-    Cs=np.empty((start_init_number,n_classes*start_init_number))
+    Ws=np.empty((n_classes,n_atoms))
+    As=np.empty((n_atoms*n_classes,n_atoms))
+    Bs=np.empty((im_vec_len,n_atoms))
+    H_Bs=np.empty((n_classes,n_atoms))
+    Q_Bs=np.empty((n_atoms*n_classes,n_atoms))
+    Cs=np.empty((n_atoms,n_atoms))
     D=np.empty((im_vec_len,n_atoms))
-    for class_index in range(n_classes):
-        D[:,:start_init_number] = image_vecs[:,inds_of_file_path[class_index][:start_init_number]]
-        # D=random.random(size=(D.shape[0],D.shape[1]))
-        D = norm_cols_plus_petit_1(D,c)
-        Ds[class_index]=np.copy(D)
-    D=Ds.transpose((0,2,1)).reshape(-1,im_vec_len).T
+    # for class_index in range(n_classes):
+    #     D[:,:start_init_number] = image_vecs[:,inds_of_file_path[class_index][:start_init_number]]
+    #     # D=random.random(size=(D.shape[0],D.shape[1]))
+    #     D = norm_cols_plus_petit_1(D,c)
+    #     Ds[class_index]=np.copy(D)
+    # D=Ds.transpose((0,2,1)).reshape(-1,im_vec_len).T
+    D=np.random.rand(im_vec_len,n_atoms)
+    D = preprocessing.normalize(D.T, norm='l2').T
     Ds=D
     print("initializing classifier ... done")
     start_t=time.time()
-
     a1=100
     # a2=80
     for i in range(update_times):
@@ -134,64 +103,65 @@ for a2 in range(1):
             # for class_index in range(n_classes):
             #     Ds[class_index]=D_all[:,n_atoms*class_index:n_atoms*(class_index+1)]
             pass
-        for class_index in range(n_classes):
-            j_label=ind_to_lab_dir[class_index]
-            if class_index==0 and i%10==0:
-                print(i)
-                sys.stdout.flush()
-            # D=Ds[class_index]
-            coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm="omp")
-            if i==0:
-                img_init_indexs=inds_of_file_path[class_index][:n_classes*start_init_number]
-                Y_init=image_vecs[:,img_init_indexs]
-                # the_H=np.zeros((n_classes,Y_init.shape[1]),dtype=int)
-                the_Q=np.zeros((n_atoms*n_classes,Y_init.shape[1]),dtype=int)
-                for k in range(Y_init.shape[1]):
-                    # the_H[class_index,k]=1
-                    the_Q[n_atoms*class_index:n_atoms*(class_index+1),k]=1
-                the_H=labels_mat[:,img_init_indexs]
-                X_single =np.eye(D.shape[1]) #X_single的每个列向量是一个图像的稀疏表征
-                Bs=np.dot(Y_init,X_single.T)
-                H_Bs=np.dot(the_H,X_single.T)
-                Q_Bs=np.dot(the_Q,X_single.T)
-                Cs=np.linalg.inv(np.dot(X_single,X_single.T))
-                Ws=np.dot(H_Bs,Cs)
-                As=np.dot(Q_Bs,Cs)
-            the_B=Bs
-            the_H_B=H_Bs
-            the_Q_B=Q_Bs
-            the_C=Cs
-            label_indexs_for_update=inds_of_file_path[class_index][:images_count[class_index]]
-            new_index=[label_indexs_for_update[(i+start_init_number)%images_count[class_index]]]
-            im_vec=image_vecs[:,new_index]
-            new_y=np.array(im_vec,dtype = float)
-            new_y=preprocessing.normalize(new_y.T, norm="l2").T
-            new_y=new_y.reshape(n_features,1)
-            new_label=class_index
-            new_h=np.zeros((n_classes,1))
-            lab_index=lab_to_ind_dir[new_label]
-            new_h=labels_mat[:,new_index]
-            new_q=np.zeros((n_atoms*n_classes,1))
-            new_q[n_atoms*lab_index:n_atoms*(lab_index+1),0]=1
-            new_x=(coder.transform(new_y.T)).T
-            # new_x=transform(D,new_y,transform_n_nonzero_coefs)
-            new_B=the_B+np.dot(new_y,new_x.T)
-            new_H_B=the_H_B+np.dot(new_h,new_x.T)
-            new_Q_B=the_Q_B+np.dot(new_q,new_x.T)
-            new_C=the_C-(np.matrix(the_C)*np.matrix(new_x)*np.matrix(new_x.T)*np.matrix(the_C))/(np.matrix(new_x.T)*np.matrix(the_C)*np.matrix(new_x)+1) #matrix inversion lemma(Woodbury matrix identity)
-            Bs=new_B
-            H_Bs=new_H_B
-            Q_Bs=new_Q_B
-            Cs=new_C
-            new_D=np.dot(new_B,new_C)
-            D=np.copy(new_D)
-            Ws=np.dot(new_H_B,new_C)
-            As=np.dot(new_Q_B,new_C)
-            for j in range(D.shape[1]):
-                Ws[:,j]=Ws[:,j]/(np.sum(D[:,j]**2))
-                As[:,j]=As[:,j]/(np.sum(D[:,j]**2))
-            D=preprocessing.normalize(D.T, norm='l2').T
-            Ds=D
+        if i%10==0:
+            print(i)
+            sys.stdout.flush()
+        coder = SparseCoder(dictionary=D.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm="omp")
+        if i==0:
+            Y_indexs=np.arange(image_vecs.shape[1])
+            random.shuffle(Y_indexs)
+            Y_indexs=Y_indexs[:n_atoms]
+            Y_init=image_vecs[:,Y_indexs]
+            the_H=labels_mat[:,Y_indexs]
+            # the_H=np.zeros((n_classes,Y_init.shape[1]),dtype=int)
+            the_Q=np.zeros((n_atoms*n_classes,Y_init.shape[1]),dtype=int)
+            for k in range(Y_init.shape[1]):
+                new_label=np.where(labels_mat[:, k] == 1)[0][0]
+                the_Q[n_atoms*new_label:n_atoms*(new_label+1),k]=1
+            X_single =np.eye(Y_init.shape[1]) #X_single的每个列向量是一个图像的稀疏表征
+            # X_single=(coder.transform(Y_init.T)).T
+            Bs=np.dot(Y_init,X_single.T)
+            H_Bs=np.dot(the_H,X_single.T)
+            Q_Bs=np.dot(the_Q,X_single.T)
+            Cs=np.linalg.inv(np.dot(X_single,X_single.T))
+            Ws=np.dot(H_Bs,Cs)
+            As=np.dot(Q_Bs,Cs)
+        new_label=np.where(labels_mat[:, i%n_data] == 1)[0][0]
+        the_B=Bs
+        the_H_B=H_Bs
+        the_Q_B=Q_Bs
+        the_C=Cs
+        im_vec=image_vecs[:,i%n_data]
+        new_y=np.array(im_vec,dtype = float)
+        new_y=new_y.reshape(n_features,1)
+        new_h=np.zeros((n_classes,1))
+        new_h[:,0]=labels_mat[:,i%n_data]
+        new_q=np.zeros((n_atoms*n_classes,1))
+        new_q[n_atoms*new_label:n_atoms*(new_label+1),0]=1
+        new_x=(coder.transform(new_y.T)).T
+        # new_x=transform(D,new_y,transform_n_nonzero_coefs)
+        new_B=the_B+np.dot(new_y,new_x.T)
+        new_H_B=the_H_B+np.dot(new_h,new_x.T)
+        new_Q_B=the_Q_B+np.dot(new_q,new_x.T)
+        new_C=the_C-(np.matrix(the_C)*np.matrix(new_x)*np.matrix(new_x.T)*np.matrix(the_C))/(np.matrix(new_x.T)*np.matrix(the_C)*np.matrix(new_x)+1) #matrix inversion lemma(Woodbury matrix identity)
+        Bs=new_B
+        H_Bs=new_H_B
+        Q_Bs=new_Q_B
+        Cs=new_C
+        new_D=np.dot(new_B,new_C)
+        D=np.copy(new_D)
+        Ws=np.dot(new_H_B,new_C)
+        As=np.dot(new_Q_B,new_C)
+        for j in range(D.shape[1]):
+            Ws[:,j]=Ws[:,j]/(np.sum(D[:,j]**2))
+            As[:,j]=As[:,j]/(np.sum(D[:,j]**2))
+        D_diff=Ds-D
+        print(abs(D_diff).max())
+        print(abs(D_diff).mean())
+        print()
+        sys.stdout.flush()
+        Ds=D
+        Ds=preprocessing.normalize(Ds.T, norm='l2').T
     end_t=time.time()
     print("train_time : "+str(end_t-start_t))
     sys.stdout.flush()
@@ -209,4 +179,4 @@ for a2 in range(1):
     np.save("model/A_all_"+py_file_name+"_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2),A_all)
     print("A_all saved")
 
-    np.save(inds_of_file_path_path,inds_of_file_path)
+    os.system("python3 clothes_test.py "+str(update_times)+" "+str(n_atoms)+" "+str(transform_n_nonzero_coefs))

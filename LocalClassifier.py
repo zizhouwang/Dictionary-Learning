@@ -19,6 +19,7 @@ import copy
 import scipy.io as scio
 import random
 from numpy.matlib import repmat
+from sklearn.decomposition import SparseCoder
 
 class Params:
     pass
@@ -180,6 +181,32 @@ def Coef_Update_Test(X,D,A,par):
     opts.A=copy.deepcopy(At_now)
     opts.ert=copy.deepcopy(ert)
     return opts
+
+def SparseRepresentation(X,D,A_mean,param,l1,transform_n_nonzero_coefs):
+    # par = Params()
+    # par.lambda1 = param.lambda1;
+    # par.lambda2 = param.lambda2;
+    # D=np.hstack((D[0],D[1],D[2],D[3],D[4]))
+    # A_ini = np.ones((transform_n_nonzero_coefs, X.shape[1]))
+    # par.A_mean = A_mean[0]
+    # if D.shape[0] >= D.shape[1]:
+    #     w, v = LA.eig(D.T @ D)
+    #     par.c = 1.05 * w.max()
+    # else:
+    #     w, v = LA.eig(D @ D.T)
+    #     par.c = 1.05 * w.max()
+    # opts = Coef_Update_Test(X, D, A_ini, par)
+    # A_test = opts.A
+    # P = LA.inv(D.T @ D + l1 * np.eye(D.shape[1])) @ D.T
+    # A_test = P @ X
+    coder = SparseCoder(dictionary=D.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
+                        transform_algorithm="omp")
+    A_test = (coder.transform(X.T)).T
+    A_test_nonzero=A_test
+    # A_test_nonzero=np.empty((transform_n_nonzero_coefs, X.shape[1]))
+    # for i in range(A_test.shape[1]):
+    #     A_test_nonzero[:,i] = A_test[:,i][A_test[:,i] != 0]
+    return A_test_nonzero
 
 def LocalClassifier(X,D,A_mean,param,Uk,bk,l1):
     par=Params()

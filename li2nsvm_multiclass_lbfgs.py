@@ -154,7 +154,8 @@ def oneofc(label):
     Y=np.zeros((N,class_num))
     for i in range(N):
         Y[i,int(class_column[i])]=1
-    return Y,class_name
+    # return Y,class_name
+    return Y
 
 def li2nsvm_grad(para,X,Y,the_lambda,sigma=[],gamma=[]):
     N=X.shape[0]
@@ -183,7 +184,9 @@ def li2nsvm_grad(para,X,Y,the_lambda,sigma=[],gamma=[]):
         dw=2*(np.dot(active_E.T,active_X).T)+2*lambdawgamma
         db=2*np.sum(active_E)
     df=np.vstack((dw,db))
-    f=np.dot(active_E.T,active_E)[0][0]+np.dot(w.T,lambdawgamma)[0][0]
+    f=np.dot(w.T,lambdawgamma)[0][0]
+    if len(active_idx)!=0:
+        f=f+np.dot(active_E.T,active_E)[0][0]
     # try:
     #     f=np.dot(active_E.T,active_E)[0][0]+np.dot(w.T,lambdawgamma)[0][0]
     # except Exception as e:
@@ -340,7 +343,8 @@ def li2nsvm_lbfgs(X,Y,the_lambda,sigma=[],gamma=[]):
     return w.T[0],b[0]
 
 def li2nsvm_multiclass_lbfgs(X,C,the_lambda,gamma=[]):
-    Y,class_name=oneofc(C)
+    # Y,class_name=oneofc(C)
+    Y=oneofc(C)
     Y=np.sign(Y-0.5)
     dim=X.shape[1]
     cnum=Y.shape[1]
@@ -351,4 +355,4 @@ def li2nsvm_multiclass_lbfgs(X,C,the_lambda,gamma=[]):
             w[:,i],b[i]=li2nsvm_lbfgs(X,Y[:,i].reshape((-1,1)),the_lambda)
         else:
             w[:,i],b[i]=li2nsvm_lbfgs(X,Y[:,i].reshape((-1,1)),the_lambda,[],gamma[:,i])
-    return w,b,class_name
+    return w,b

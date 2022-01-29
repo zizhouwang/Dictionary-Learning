@@ -178,7 +178,7 @@ for m in range(xmu.shape[0]):
 
 
 
-    params.max_iter=1000
+    params.max_iter=1
 
 
 
