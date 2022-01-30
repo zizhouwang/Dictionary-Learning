@@ -277,7 +277,7 @@ def MLDLSI2(params,y,atom_n):#[D,A1_mean,Dusage,Uk,bk]
                 DataNum[i] = X[i].shape[1]
                 DataXb = np.hstack((DataXb, X[i]))
         dD=np.empty(NC,dtype=object)
-        print("r="+str(r)+"\n")
+        # print("r="+str(r)+"\n")
         sys.stdout.flush()
         # if r==140:
         #     pass

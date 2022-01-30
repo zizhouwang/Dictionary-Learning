@@ -31,9 +31,9 @@ def zoom(alo, ahi, x0, f0, g0, s0, c1, c2, linegrad0, falo,galo, fhi, ghi,  f, X
         aj=ahi-(ahi-alo)*(ghi+d2-d1)/(ghi-galo+2*d2)
         # pdb.set_trace()
         if abs(d2)==np.inf or np.isnan(d2):
-            pdb.set_trace()
+            d2=0
         if abs(aj)==np.inf or np.isnan(aj):
-            pdb.set_trace()
+            aj=0
         if echo==True:
             pass
         if alo<ahi:
