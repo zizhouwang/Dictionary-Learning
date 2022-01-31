@@ -60,7 +60,7 @@ def GetPrefix(params):
     prefix = path+'model-'+time.strftime('%Y-%m-%d-%H-%M',time.localtime(time.time()))
     return prefix
 
-def RLSDLA(n_atoms,transform_n_nonzero_coefs):
+def RLSDLA(n_atoms,transform_n_nonzero_coefs,is_find_best):
     data = scipy.io.loadmat('T4.mat')  # 读取mat文件
     image_vecs = data['train_data']
     labels_mat = data['train_Annotation']
@@ -108,10 +108,11 @@ def RLSDLA(n_atoms,transform_n_nonzero_coefs):
     #     D = norm_cols_plus_petit_1(D,c)
     #     Ds[class_index]=copy.deepcopy(D)
     # D=Ds.transpose((0,2,1)).reshape(-1,im_vec_len).T
-    D = np.random.rand(im_vec_len, n_atoms)
+    D = np.random.randn(im_vec_len, n_atoms)
 
 
-    D=scipy.io.loadmat('D_random_init.mat')['D_init']
+    if is_find_best is not True:
+        D=scipy.io.loadmat('D_random_init.mat')['D_init']
 
 
     D = preprocessing.normalize(D.T, norm='l2').T
@@ -123,7 +124,8 @@ def RLSDLA(n_atoms,transform_n_nonzero_coefs):
     random.shuffle(Y_indexs)
 
 
-    Y_indexs=scipy.io.loadmat('Y_indexs.mat')['Y_indexs'][0]
+    if is_find_best is not True:
+        Y_indexs=scipy.io.loadmat('Y_indexs.mat')['Y_indexs'][0]
 
 
     Y_indexs_part = Y_indexs[:n_atoms]
@@ -135,7 +137,7 @@ def RLSDLA(n_atoms,transform_n_nonzero_coefs):
     Bs = np.dot(Y_init, X_single.T)
     Cs = np.linalg.inv(np.dot(X_single, X_single.T))
 
-    def train_one_time(i):
+    def train_one_time(i,incoherent_key):
         if i % 10 == 0:
             # print(i)
             sys.stdout.flush()
@@ -159,6 +161,18 @@ def RLSDLA(n_atoms,transform_n_nonzero_coefs):
         D[:] = copy.deepcopy(new_D)
         Ds[:] = D
         Ds[:] = preprocessing.normalize(Ds.T, norm='l2').T
+        if i==incoherent_key:
+            pass
+            # print("Start reduce coherence")
+            # D_all = D
+            # coder = SparseCoder(dictionary=D_all.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
+            #                     transform_algorithm="omp")
+            # the_X = (coder.transform(image_vecs.T)).T
+            # D_new_all = incoherent_3000(D_all, image_vecs, the_X, 1)
+            # D[:]=D_new_all
+            # Ds[:] = D
+            # Ds[:] = preprocessing.normalize(Ds.T, norm='l2').T
+
         # print(abs(D_diff).max())
         # print(abs(D_diff).mean())
         # print()
@@ -279,23 +293,16 @@ def MLDLSI2(params,y,atom_n):#[D,A1_mean,Dusage,Uk,bk]
         dD=np.empty(NC,dtype=object)
         # print("r="+str(r)+"\n")
         sys.stdout.flush()
-        # if r==140:
-        #     pass
-        #     #130 0.8160720921590491
-        #     print("Start reduce coherence")
-        #     D_all = np.hstack((D[0], D[1], D[2], D[3], D[4]))
-        #     ori_gram = D_all.T @ D_all
-        #     ori_gram -= np.eye(ori_gram.shape[0])
-        #     ori_coherent = ori_gram.max()
-        #     coder = SparseCoder(dictionary=D_all.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
-        #                         transform_algorithm="omp")
-        #     the_X = (coder.transform(Xb.T)).T
-        #     D_new_all = incoherent_3000(D_all, Xb, the_X, 1)
-        #     new_gram = D_new_all.T @ D_new_all
-        #     new_gram -= np.eye(new_gram.shape[0])
-        #     new_coherent = new_gram.max()
-        #     for i in range(D.shape[0]):
-        #         D[i] = D_new_all[:, i * transform_n_nonzero_coefs:(i + 1) * transform_n_nonzero_coefs]
+        if r==5 or r==4:
+            pass
+            # print("Start reduce coherence")
+            # D_all = np.hstack((D[0], D[1], D[2], D[3], D[4]))
+            # coder = SparseCoder(dictionary=D_all.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
+            #                     transform_algorithm="omp")
+            # the_X = (coder.transform(DataXb.T)).T
+            # D_new_all = incoherent_3000(D_all, DataXb, the_X, 1)
+            # for i in range(D.shape[0]):
+            #     D[i] = D_new_all[:, i * transform_n_nonzero_coefs:(i + 1) * transform_n_nonzero_coefs]
         find=np.arange(finished.shape[0])[finished<3]
         if find.shape[0]==0:
             if params.mu_mode[0]<0 and (params.mu0>0 or params.xmu0>0):
