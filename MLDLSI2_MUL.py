@@ -112,8 +112,8 @@ def RLSDLA(n_atoms,transform_n_nonzero_coefs,is_find_best):
 
 
     if is_find_best is not True:
-        D=scipy.io.loadmat('D_random_init.mat')['D_init']
-
+        D_init=scipy.io.loadmat('D_random_init.mat')['D_init']
+    D=copy.deepcopy(D_init)
 
     D = preprocessing.normalize(D.T, norm='l2').T
     Ds = D
@@ -181,7 +181,7 @@ def RLSDLA(n_atoms,transform_n_nonzero_coefs,is_find_best):
         # X_all = (coder.transform(image_vecs.T)).T
         # return Ds,X_all
         return Ds
-    return train_one_time,copy.deepcopy(D),copy.deepcopy(Y_indexs_part)
+    return train_one_time,D_init,copy.deepcopy(Y_indexs_part)
 
 def MLDLSI2(params,y,atom_n):#[D,A1_mean,Dusage,Uk,bk]
     transform_n_nonzero_coefs=atom_n
@@ -278,7 +278,7 @@ def MLDLSI2(params,y,atom_n):#[D,A1_mean,Dusage,Uk,bk]
 
     Uk=np.empty((D[0].shape[1],NC),dtype='float64')
     bk=np.empty(NC,dtype='float64')
-    def train_one_time(r,is_last_layer,upper_A=None):
+    def train_one_time(r,is_last_layer,upper_A,incoherent_key):
         if upper_A is not None:
             DataXb=upper_A
             for i in range(NC):
@@ -293,16 +293,16 @@ def MLDLSI2(params,y,atom_n):#[D,A1_mean,Dusage,Uk,bk]
         dD=np.empty(NC,dtype=object)
         # print("r="+str(r)+"\n")
         sys.stdout.flush()
-        if r==5 or r==4:
+        if r==6:
             pass
-            # print("Start reduce coherence")
-            # D_all = np.hstack((D[0], D[1], D[2], D[3], D[4]))
-            # coder = SparseCoder(dictionary=D_all.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
-            #                     transform_algorithm="omp")
-            # the_X = (coder.transform(DataXb.T)).T
-            # D_new_all = incoherent_3000(D_all, DataXb, the_X, 1)
-            # for i in range(D.shape[0]):
-            #     D[i] = D_new_all[:, i * transform_n_nonzero_coefs:(i + 1) * transform_n_nonzero_coefs]
+            print("Start reduce coherence")
+            D_all = np.hstack((D[0], D[1], D[2], D[3], D[4]))
+            coder = SparseCoder(dictionary=D_all.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
+                                transform_algorithm="omp")
+            the_X = (coder.transform(DataXb.T)).T
+            D_new_all = incoherent_3000(D_all, DataXb, the_X, 1)
+            for i in range(D.shape[0]):
+                D[i] = D_new_all[:, i * transform_n_nonzero_coefs:(i + 1) * transform_n_nonzero_coefs]
         find=np.arange(finished.shape[0])[finished<3]
         if find.shape[0]==0:
             if params.mu_mode[0]<0 and (params.mu0>0 or params.xmu0>0):

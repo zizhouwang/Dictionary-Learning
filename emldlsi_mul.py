@@ -53,6 +53,7 @@ MAX_Average_Precision=0.0
 if os.path.exists('MAX_Average_Precision.mat'):
     MAX_Average_Precision=scipy.io.loadmat('MAX_Average_Precision.mat')['MAX_Average_Precision'][0][0]
 rr=scipy.io.loadmat('r1_and_r2.mat')
+incoherent_key=scipy.io.loadmat('incoherent_key.mat')
 is_find_best=False
 
 def DefaultModelParams():
@@ -167,16 +168,6 @@ for nonsense in range(10000):
     params.xmu0=0.05
     params.mu_mode=[-1]
     params.positive=False
-
-
-
-    r2_times=int(np.random.rand()*50)+50
-    if is_find_best is not True:
-        r2_times=rr['r2'][0][0]
-    params.max_iter=50
-
-
-
     params.min_change=1e-5
     params.batch_size=0
     params.test_size=0
@@ -230,12 +221,19 @@ for nonsense in range(10000):
     DataXb=np.empty((train_data_reg.shape[0],0))
     for i in range(labelNum):
         DataXb=np.hstack((DataXb,copy.deepcopy(train_data_reg[:,train_Annotation[i,:]==1])))
+
+
+
     r1_times=int(np.random.rand()*90)+30
     if is_find_best is not True:
         r1_times=rr['r1'][0][0]
+    # r1_times=50
+
+
+
     for r1 in range(r1_times):#r1 97 r2 5 0.807534373838722
         #r1 102 r2 5 0.808937198067633
-        D1=train_func1(r1,nonsense+1)
+        D1=train_func1(r1,nonsense)
 
     coder = SparseCoder(dictionary=D1.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
                         transform_algorithm="omp")
@@ -259,10 +257,21 @@ for nonsense in range(10000):
         params.D0=copy.deepcopy(D0_reg_layer2)
 
     old_Average_Precision=0.0
+
+
+
+    r2_times=int(np.random.rand()*50)+50
+    if is_find_best is not True:
+        r2_times=rr['r2'][0][0]
+    r2_times=14
+    params.max_iter=r2_times
+
+
+
     train_func2 = MLDLSI2(params,y,atom_n_2)
     for r2 in range(params.max_iter):
         # D1,A_mean1,Dusage1,Uk1,bk1,A1_sum1,y,nonsense=train_func1(r2,False)
-        D,A_mean,Dusage,Uk,bk,A1_sum2,y,is_finish=train_func2(r2,True,A1_sum1)
+        D,A_mean,Dusage,Uk,bk,A1_sum2,y,is_finish=train_func2(r2,True,A1_sum1,nonsense)
         if is_finish:
             break
 
@@ -282,18 +291,24 @@ for nonsense in range(10000):
             break
         else:
             old_Average_Precision = Average_Precision[0]
-        if Average_Precision[0]<0.75:
+        if Average_Precision[0]<0.75 and is_find_best:
             break
+        D_temp=scipy.io.loadmat('D_random_init.mat')['D_init']
+        aa=abs(D_temp-D_init).sum()
+        Y_indexs_temp=scipy.io.loadmat('Y_indexs.mat')['Y_indexs'][0]
+        bb=abs(Y_indexs_temp-Y_indexs).sum()
+        D0_reg_layer2_temp=scipy.io.loadmat('D0_reg_layer2.mat')['D0_reg_layer2']
+        cc=abs(D0_reg_layer2_temp-D0_reg_layer2).sum()
         if Average_Precision[0]>MAX_Average_Precision:
             MAX_Average_Precision=Average_Precision[0]
+            scio.savemat('incoherent_key.mat', {'incoherent_key': nonsense})
             scio.savemat('r1_and_r2.mat', {'r1': r1_times,'r2':r2+1})
             scio.savemat('D_random_init.mat', {'D_init': D_init})
             scio.savemat('Y_indexs.mat', {'Y_indexs': Y_indexs})
             scio.savemat('D0_reg_layer2.mat', {'D0_reg_layer2': D0_reg_layer2})
             scio.savemat('MAX_Average_Precision.mat', {'MAX_Average_Precision': MAX_Average_Precision})
 
-
-    aa=1
+    ff=1
         # Coverage[m]=coverage(output1,test_Annotation)
         # OneError[m]=One_error(output1,test_Annotation)
     # result_data=[xmu,Average_Precision,Coverage,OneError,RankingLoss]
