@@ -263,7 +263,7 @@ for nonsense in range(10000):
     r2_times=int(np.random.rand()*50)+50
     if is_find_best is not True:
         r2_times=rr['r2'][0][0]
-    r2_times=14
+    # r2_times=14
     params.max_iter=r2_times
 
 
@@ -275,40 +275,32 @@ for nonsense in range(10000):
         if is_finish:
             break
 
-        testparam=Params()
-        testparam.lambda1=params.model.the_lambda
-        testparam.lambda2=0.04
-        A_test = SparseRepresentation(test_data_reg,D1,A_mean1,testparam,params.model.lambda1,transform_n_nonzero_coefs)
-        # output1,output2,output3 = LocalClassifier(test_data_reg,D1,A_mean1,testparam,Uk1,bk1,params.model.lambda1)
-        output1,output2,output3 = LocalClassifier(A_test,D,A_mean,testparam,Uk,bk,params.model.lambda1)
-        # toutput1,toutput2,toutput3 = LocalClassifier(train_data_reg,D,A_mean,testparam,Uk,bk,params.model.lambda1)
-        # RankingLoss[m]=Ranking_loss(output1,test_Annotation)
-        Average_Precision[0],Average_Precision1=Average_precision(output1,test_Annotation)
-        print()
-        print("Average_Precision: "+str(Average_Precision[0]))
-        print()
-        if old_Average_Precision==Average_Precision[0]:
-            break
-        else:
-            old_Average_Precision = Average_Precision[0]
-        if Average_Precision[0]<0.75 and is_find_best:
-            break
-        D_temp=scipy.io.loadmat('D_random_init.mat')['D_init']
-        aa=abs(D_temp-D_init).sum()
-        Y_indexs_temp=scipy.io.loadmat('Y_indexs.mat')['Y_indexs'][0]
-        bb=abs(Y_indexs_temp-Y_indexs).sum()
-        D0_reg_layer2_temp=scipy.io.loadmat('D0_reg_layer2.mat')['D0_reg_layer2']
-        cc=abs(D0_reg_layer2_temp-D0_reg_layer2).sum()
-        if Average_Precision[0]>MAX_Average_Precision:
-            MAX_Average_Precision=Average_Precision[0]
-            scio.savemat('incoherent_key.mat', {'incoherent_key': nonsense})
-            scio.savemat('r1_and_r2.mat', {'r1': r1_times,'r2':r2+1})
-            scio.savemat('D_random_init.mat', {'D_init': D_init})
-            scio.savemat('Y_indexs.mat', {'Y_indexs': Y_indexs})
-            scio.savemat('D0_reg_layer2.mat', {'D0_reg_layer2': D0_reg_layer2})
-            scio.savemat('MAX_Average_Precision.mat', {'MAX_Average_Precision': MAX_Average_Precision})
-
-    ff=1
+    testparam=Params()
+    testparam.lambda1=params.model.the_lambda
+    testparam.lambda2=0.04
+    A_test = SparseRepresentation(test_data_reg,D1,A_mean1,testparam,params.model.lambda1,transform_n_nonzero_coefs)
+    # output1,output2,output3 = LocalClassifier(test_data_reg,D1,A_mean1,testparam,Uk1,bk1,params.model.lambda1)
+    output1,output2,output3 = LocalClassifier(A_test,D,A_mean,testparam,Uk,bk,params.model.lambda1)
+    # toutput1,toutput2,toutput3 = LocalClassifier(train_data_reg,D,A_mean,testparam,Uk,bk,params.model.lambda1)
+    # RankingLoss[m]=Ranking_loss(output1,test_Annotation)
+    Average_Precision[0],Average_Precision1=Average_precision(output1,test_Annotation)
+    print()
+    print("Average_Precision: "+str(Average_Precision[0]))
+    print()
+    if old_Average_Precision==Average_Precision[0]:
+        break
+    else:
+        old_Average_Precision = Average_Precision[0]
+    if Average_Precision[0]<0.75 and is_find_best:
+        break
+    if Average_Precision[0]>MAX_Average_Precision:
+        MAX_Average_Precision=Average_Precision[0]
+        scio.savemat('incoherent_key.mat', {'incoherent_key': nonsense})
+        scio.savemat('r1_and_r2.mat', {'r1': r1_times,'r2':r2+1})
+        scio.savemat('D_random_init.mat', {'D_init': D_init})
+        scio.savemat('Y_indexs.mat', {'Y_indexs': Y_indexs})
+        scio.savemat('D0_reg_layer2.mat', {'D0_reg_layer2': D0_reg_layer2})
+        scio.savemat('MAX_Average_Precision.mat', {'MAX_Average_Precision': MAX_Average_Precision})
         # Coverage[m]=coverage(output1,test_Annotation)
         # OneError[m]=One_error(output1,test_Annotation)
     # result_data=[xmu,Average_Precision,Coverage,OneError,RankingLoss]

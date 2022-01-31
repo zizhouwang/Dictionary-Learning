@@ -113,7 +113,7 @@ def RLSDLA(n_atoms,transform_n_nonzero_coefs,is_find_best):
 
     if is_find_best is not True:
         D_init=scipy.io.loadmat('D_random_init.mat')['D_init']
-    D=copy.deepcopy(D_init)
+        D=copy.deepcopy(D_init)
 
     D = preprocessing.normalize(D.T, norm='l2').T
     Ds = D
