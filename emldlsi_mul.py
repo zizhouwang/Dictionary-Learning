@@ -1,3 +1,5 @@
+#two layer dictionary learning: RLSDLA-MLDLSI
+
 import scipy.io
 import time
 import pdb
