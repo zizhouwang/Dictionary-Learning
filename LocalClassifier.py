@@ -183,6 +183,9 @@ def Coef_Update_Test(X,D,A,par):
     return opts
 
 def SparseRepresentation(X,D,A_mean,param,l1,transform_n_nonzero_coefs):
+    if len(D.shape)>2:
+        featureDim=D.shape[1]
+        D=D.transpose(1,0,2).reshape((featureDim,-1))
     # par = Params()
     # par.lambda1 = param.lambda1;
     # par.lambda2 = param.lambda2;
@@ -208,7 +211,7 @@ def SparseRepresentation(X,D,A_mean,param,l1,transform_n_nonzero_coefs):
     #     A_test_nonzero[:,i] = A_test[:,i][A_test[:,i] != 0]
     return A_test_nonzero
 
-def LocalClassifier(X,D,A_mean,param,Uk,bk,l1):
+def LocalClassifier(X,D,A_mean,param,Uk,bk,l1,is_return_A_test=False):
     par=Params()
     par.lambda1   = param.lambda1;
     par.lambda2   = param.lambda2;
@@ -243,4 +246,10 @@ def LocalClassifier(X,D,A_mean,param,Uk,bk,l1):
     output1=repmat(np.max(rebuild_all,axis=0),labelNum,1)-rebuild_all
     output2=repmat(np.max(rebuild_nw,axis=0),labelNum,1)-rebuild_nw
     output3=rebuild_test
+    A_test_one=np.empty(A_test[0].shape)
+    for i in range(X.shape[1]):
+        A_test_one[:,i]=A_test[output1[:, i].argmax()][:,i]
+    # A_test[output1[:, 0].argmax()]
+    if is_return_A_test:
+        return output1,output2,output3,A_test_one
     return output1,output2,output3
