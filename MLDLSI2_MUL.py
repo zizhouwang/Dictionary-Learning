@@ -240,7 +240,8 @@ def MLDLSI2(params,y,atom_n):#[D,A1_mean,Dusage,Uk,bk]
     #     DataXb=np.hstack((DataXb,X[i]))
     Uinit=np.zeros((Xb.shape[0],NC))
     binit=np.zeros(NC)
-    labelsb = labelsb*2-1
+    if labelsb.dtype=='<f8':
+        labelsb = labelsb*2-1
     NumLabels=int(np.sum(np.sum(labelsb,axis=0).T))
     A1_sum=np.ones((atom_n,NumLabels))
     A1_ini=np.ones((atom_n,NumLabels))
@@ -293,7 +294,7 @@ def MLDLSI2(params,y,atom_n):#[D,A1_mean,Dusage,Uk,bk]
         dD=np.empty(NC,dtype=object)
         # print("r="+str(r)+"\n")
         sys.stdout.flush()
-        if r==6:
+        if r==6:#incoherent_key
             pass
             print("Start reduce coherence")
             D_all = np.hstack((D[0], D[1], D[2], D[3], D[4]))
