@@ -210,9 +210,10 @@ for m in range(xmu.shape[0]):
     output1,output2,output3 = LocalClassifier(test_data_reg,D,A_mean,testparam,Uk,bk,params.model.lambda1)
     toutput1,toutput2,toutput3 = LocalClassifier(train_data_reg,D,A_mean,testparam,Uk,bk,params.model.lambda1)
     test_Annotation= 2*test_Annotation-1
-    # RankingLoss[m]=Ranking_loss(output1,test_Annotation)
     Average_Precision[m],Average_Precision1=Average_precision(output1,test_Annotation)
+    RankingLoss[m]=Ranking_loss(output1,test_Annotation)
     print()
+    print(RankingLoss[m])
     print(Average_Precision[m])
     # Coverage[m]=coverage(output1,test_Annotation)
     # OneError[m]=One_error(output1,test_Annotation)

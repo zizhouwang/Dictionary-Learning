@@ -30,6 +30,84 @@ def soft(x,tau):
     y=np.sign(x)*temp
     return y
 
+def Coverage(Outputs,test_target):
+    num_class=Outputs.shape[0]
+    num_instance=Outputs.shape[1]
+    Label=np.empty(num_instance,dtype=object)
+    not_Label=np.empty(num_instance,dtype=object)
+    for i in range(num_class):
+        Label[i]=np.array([])
+        not_Label[i]=np.array([])
+    Label_size=np.zeros(num_instance)
+    for i in range(num_instance):
+        temp=test_target[:,i]
+        Label_size[i]=np.sum(temp==np.ones(num_class))
+        for j in range(num_class):
+            if temp[j]==1:
+                Label[i]=np.hstack((Label[i],np.array([j])))
+            else:
+                not_Label[i]=np.hstack((not_Label[i],np.array([j])))
+    cover=0
+    for i in range(num_instance):
+        temp=Outputs[:,i]
+        index=temp.argsort()
+        temp.sort()
+        tempvalue=temp
+        temp_min=num_class+1
+        for m in range(Label_size[i]):
+            res=np.where(index==Label[i][m])[0]
+            if res.shape[0]>0:
+                if res[0]<temp_min:
+                    temp_min=res[0]
+        cover=cover+(num_class-temp_min+1)
+    Coverage=(cover/num_instance)-1
+    return Coverage
+
+def Ranking_loss(Outputs,test_target):
+    num_class=Outputs.shape[0]
+    num_instance=Outputs.shape[1]
+    temp_Outputs=np.array([]).reshape((num_class,0))
+    temp_test_target=np.array([]).reshape((test_target.shape[0],0))
+    for i in range(num_instance):
+        temp=test_target[:,i]
+        if (np.sum(temp)!=num_class)&(np.sum(temp)!=-num_class):
+            temp_Outputs=np.hstack((temp_Outputs,Outputs[:,i].reshape(-1,1)))
+            temp_test_target=np.hstack((temp_test_target,temp.reshape(-1,1)))
+    Outputs = temp_Outputs
+    test_target = temp_test_target
+    num_class=Outputs.shape[0]
+    num_instance=Outputs.shape[1]
+
+    Label=np.empty(num_instance,dtype=object)
+    not_Label=np.empty(num_instance,dtype=object)
+    for i in range(num_instance):
+        Label[i]=np.array([],dtype=int)
+        not_Label[i]=np.array([],dtype=int)
+    Label_size=np.zeros(num_instance,dtype=int)
+    rl_binary=np.empty(num_instance)
+    for i in range(num_instance):
+        temp=test_target[:,i]
+        Label_size[i]=np.sum(temp==np.ones(num_class))
+        for j in range(num_class):
+            if temp[j]==1:
+                Label[i]=np.hstack((Label[i],np.array([j])))
+            else:
+                not_Label[i]=np.hstack((not_Label[i],np.array([j])))
+    rankloss=0
+    for i in range(num_instance):
+        temp=0
+        for m in range(Label_size[i]):
+            for n in range(num_class-Label_size[i]):
+                if Outputs[Label[i][m],i]<=Outputs[not_Label[i][n],i]:
+                    temp=temp+1
+        rl_binary[i]=temp/((m+1)*(n+1))
+        rankloss=rankloss+temp/((m+1)*(n+1))
+    RankingLoss=rankloss/num_instance
+    return RankingLoss
+
+def One_error(Outputs,test_target):
+    pass
+
 def Average_precision(Outputs,test_target):
     ap_binary=[]
     num_class,num_instance=Outputs.shape

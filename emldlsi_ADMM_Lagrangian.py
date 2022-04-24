@@ -25,6 +25,7 @@ import scipy.io as scio
 from li2nsvm_multiclass_lbfgs import *
 
 atom_n=300
+atom_n2=300
 transform_n_nonzero_coefs=30
 data = scipy.io.loadmat('T4.mat') # 读取mat文件
 D_init = scipy.io.loadmat('D_init.mat')['D0_reg'][0] # 读取mat文件
@@ -56,19 +57,11 @@ beta=6
 delta=1e-6
 gamma=np.random.rand(1)[0]
 gamma=0.5
-D=np.random.randn(train_data.shape[0],atom_n)
+D=np.random.randn(one_label_data_all.shape[0],atom_n)
 D=preprocessing.normalize(D.T, norm='l2').T
 G=np.empty(one_label_data_all.shape)
 H=np.empty(one_label_data_all.shape)
-Y_pre=np.zeros((labelNum,y.shape[0]),dtype=int)
-for i in range(y.shape[0]):
-    Y_pre[y[i],i]=1
-W=np.random.randn(labelNum,atom_n)
-W=preprocessing.normalize(W.T, norm='l2').T
-G_W=np.empty(Y_pre.shape)
-H_W=np.empty(Y_pre.shape)
-lagrangian_multiplier_W=np.zeros(Y_pre.shape)
-for l in range(50):
+for l in range(5):
     print(l)
     coder = SparseCoder(dictionary=D.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
                         transform_algorithm="omp")
@@ -80,24 +73,53 @@ for l in range(50):
         D[:,i]=D[:,i]+(H@X_train[i])/(Omega+delta)
     D=preprocessing.normalize(D.T, norm='l2').T
     lagrangian_multiplier=lagrangian_multiplier+gamma*beta*(G-D@X_train)
+    pass
+
+coder = SparseCoder(dictionary=D.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
+                    transform_algorithm="omp")
+X_train = (coder.transform(one_label_data_all.T)).T
+X_test_layer1 = (coder.transform(test_data_reg.T)).T
+
+train_data_reg_layer2=copy.deepcopy(preprocessing.normalize(X_train.T, norm='l2').T)
+D2=np.random.randn(train_data_reg_layer2.shape[0],atom_n2)
+D2=preprocessing.normalize(D2.T, norm='l2').T
+G2=np.empty(train_data_reg_layer2.shape)
+H2=np.empty(train_data_reg_layer2.shape)
+lagrangian_multiplier2=np.zeros(train_data_reg_layer2.shape)
+Y_pre=np.zeros((labelNum,y.shape[0]),dtype=int)
+for i in range(y.shape[0]):
+    Y_pre[y[i],i]=1
+W=np.random.randn(labelNum,atom_n2)
+W=preprocessing.normalize(W.T, norm='l2').T
+G_W=np.empty(Y_pre.shape)
+H_W=np.empty(Y_pre.shape)
+lagrangian_multiplier_W=np.zeros(Y_pre.shape)
+for l in range(50):
+    print(l)
+    coder2 = SparseCoder(dictionary=D2.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
+                        transform_algorithm="omp")
+    X_train = (coder2.transform(train_data_reg_layer2.T)).T
+    G2=(beta*D2@X_train+2*train_data_reg_layer2-lagrangian_multiplier2)/(2+beta)
+    H2=G2+lagrangian_multiplier2/beta-D2@X_train
+    for i in range(D2.shape[1]):
+        Omega=X_train[i]@X_train[i]
+        D2[:,i]=D2[:,i]+(H2@X_train[i])/(Omega+delta)
+    D2=preprocessing.normalize(D2.T, norm='l2').T
+    lagrangian_multiplier2=lagrangian_multiplier2+gamma*beta*(G2-D2@X_train)
 
     G_W=(beta*W@X_train+2*Y_pre-lagrangian_multiplier_W)/(2+beta)
     H_W=G_W+lagrangian_multiplier_W/beta-W@X_train
-    for i in range(D.shape[1]):
+    for i in range(D2.shape[1]):
         Omega=X_train[i]@X_train[i]
         W[:,i]=W[:,i]+(H_W@X_train[i])/(Omega+delta)
-    W=preprocessing.normalize(W.T, norm='l2').T
+    # W=preprocessing.normalize(W.T, norm='l2').T
     lagrangian_multiplier_W=lagrangian_multiplier_W+gamma*beta*(G_W-W@X_train)
 
-    coder = SparseCoder(dictionary=D.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
+    coder2 = SparseCoder(dictionary=D2.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
                         transform_algorithm="omp")
-    X_test = (coder.transform(test_data_reg.T)).T
-    diff = np.sum(abs(test_data_reg - D @ X_test))
-    print(diff)
+    X_test = (coder2.transform(X_test_layer1.T)).T
     output=W@X_test
     Average_Precision,Average_Precision1=Average_precision(output,test_Annotation)
     print(Average_Precision)
     pass
-# W=Y_pre@X_train.T@LA.inv(X_train@X_train.T)
-
-scio.savemat('D_and_P.mat', {'D': D})
+W=Y_pre@X_train.T@LA.inv(X_train@X_train.T)
