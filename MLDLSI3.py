@@ -169,7 +169,7 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
         dD=np.empty(NC,dtype=object)
         print("r="+str(r)+"\n")
         sys.stdout.flush()
-        if r==-1:
+        if r==130:
             pass
             #130 0.8160720921590491
             print("Start reduce coherence")
@@ -199,7 +199,7 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
                 break
         else:
             pass
-        Uk, bk, class_name = li2nsvm_multiclass_lbfgs(A1_sum.T,y, tau)
+        Uk, bk = li2nsvm_multiclass_lbfgs(A1_sum.T,y, tau)
         temp_z=None
         for c in range(NC):
             if r>0 and c>0:

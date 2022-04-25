@@ -168,7 +168,7 @@ def MLDLSI2(params):#[D,A1_mean,Dusage,Uk,bk]
         dD=np.empty(NC,dtype=object)
         print("r="+str(r)+"\n")
         sys.stdout.flush()
-        if r==140:
+        if r==130:
             pass
             #130 0.8160720921590491
             print("Start reduce coherence")

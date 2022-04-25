@@ -141,7 +141,7 @@ D0_reg=np.random.randn(labelNum,train_data.shape[0],atom_n)
 xmu=np.array([0.05])
 RankingLoss=np.zeros((xmu.shape[0]))
 Average_Precision=np.zeros((xmu.shape[0]))
-Coverage=np.zeros((xmu.shape[0]))
+coverage=np.zeros((xmu.shape[0]))
 OneError=np.zeros((xmu.shape[0]))
 for m in range(xmu.shape[0]):
     # for i in range(labelNum):
@@ -178,7 +178,7 @@ for m in range(xmu.shape[0]):
 
 
 
-    params.max_iter=1
+    params.max_iter=1000
 
 
 
@@ -210,12 +210,14 @@ for m in range(xmu.shape[0]):
     output1,output2,output3 = LocalClassifier(test_data_reg,D,A_mean,testparam,Uk,bk,params.model.lambda1)
     toutput1,toutput2,toutput3 = LocalClassifier(train_data_reg,D,A_mean,testparam,Uk,bk,params.model.lambda1)
     test_Annotation= 2*test_Annotation-1
-    Average_Precision[m],Average_Precision1=Average_precision(output1,test_Annotation)
-    RankingLoss[m]=Ranking_loss(output1,test_Annotation)
+    Average_Precision[m],Average_Precision1=Average_precision(copy.deepcopy(output1),test_Annotation)
+    RankingLoss=Ranking_loss(copy.deepcopy(output1),test_Annotation)
+    coverage=Coverage(copy.deepcopy(output1),test_Annotation)
+    OneError=One_error(copy.deepcopy(output1),test_Annotation)
     print()
-    print(RankingLoss[m])
     print(Average_Precision[m])
-    # Coverage[m]=coverage(output1,test_Annotation)
-    # OneError[m]=One_error(output1,test_Annotation)
-# result_data=[xmu,Average_Precision,Coverage,OneError,RankingLoss]
+    print(RankingLoss)
+    print(coverage)
+    print(OneError)
+# result_data=[xmu,Average_Precision,coverage,OneError,RankingLoss]
 # pdb.set_trace()

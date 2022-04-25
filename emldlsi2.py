@@ -183,7 +183,7 @@ time_ns=time.time_ns()
 xmu=np.array([0.05])
 RankingLoss=np.zeros((xmu.shape[0]))
 Average_Precision=np.zeros((xmu.shape[0]))
-Coverage=np.zeros((xmu.shape[0]))
+coverage=np.zeros((xmu.shape[0]))
 OneError=np.zeros((xmu.shape[0]))
 for m in range(xmu.shape[0]):
     # for i in range(labelNum):
@@ -268,12 +268,12 @@ for m in range(xmu.shape[0]):
         new_output1[:,i]=weighted_res
     output1=new_output1
     Average_Precision[m],Average_Precision1=Average_precision(output1,test_Annotation)
+    coverage=Coverage(output1,test_Annotation)
+    OneError=One_error(output1,test_Annotation)
     print()
     print(Average_Precision[m])
     if Average_Precision[m]>0.815:
         scio.savemat('D_init_'+str(Average_Precision[m])+'.mat', {'D': D_random_init})
         scio.savemat('middle_res_'+str(Average_Precision[m])+'.mat', {'D': D,'A_mean': A_mean,'Dusage': Dusage,'Uk': Uk,'bk': bk})
-    # Coverage[m]=coverage(output1,test_Annotation)
-    # OneError[m]=One_error(output1,test_Annotation)
-# result_data=[xmu,Average_Precision,Coverage,OneError,RankingLoss]
+# result_data=[xmu,Average_Precision,coverage,OneError,RankingLoss]
 # pdb.set_trace()

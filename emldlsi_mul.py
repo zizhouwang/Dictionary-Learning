@@ -141,7 +141,7 @@ def Dict_Ini(data,nCol,wayInit):
         exit()
     return D
 
-for nonsense in range(10000):
+for nonsense in range(1):
     atom_n_1=300
     transform_n_nonzero_coefs=30
     data = scipy.io.loadmat('T4.mat')
@@ -160,7 +160,7 @@ for nonsense in range(10000):
     xmu=np.array([0.05])
     RankingLoss=np.zeros((xmu.shape[0]))
     Average_Precision=np.zeros((xmu.shape[0]))
-    Coverage=np.zeros((xmu.shape[0]))
+    coverage=np.zeros((xmu.shape[0]))
     OneError=np.zeros((xmu.shape[0]))
     params=Params()
     params.model=DefaultModelParams()
@@ -286,8 +286,14 @@ for nonsense in range(10000):
     # toutput1,toutput2,toutput3 = LocalClassifier(train_data_reg,D,A_mean,testparam,Uk,bk,params.model.lambda1)
     # RankingLoss[m]=Ranking_loss(output1,test_Annotation)
     Average_Precision[0],Average_Precision1=Average_precision(output1,test_Annotation)
+    RankingLoss=Ranking_loss(copy.deepcopy(output1),test_Annotation)
+    coverage=Coverage(copy.deepcopy(output1),test_Annotation)
+    OneError=One_error(copy.deepcopy(output1),test_Annotation)
     print()
     print("Average_Precision: "+str(Average_Precision[0]))
+    print(RankingLoss)
+    print(coverage)
+    print(OneError)
     print()
     if old_Average_Precision==Average_Precision[0]:
         break
@@ -303,7 +309,5 @@ for nonsense in range(10000):
         scio.savemat('Y_indexs.mat', {'Y_indexs': Y_indexs})
         scio.savemat('D0_reg_layer2.mat', {'D0_reg_layer2': D0_reg_layer2})
         scio.savemat('MAX_Average_Precision.mat', {'MAX_Average_Precision': MAX_Average_Precision})
-        # Coverage[m]=coverage(output1,test_Annotation)
-        # OneError[m]=One_error(output1,test_Annotation)
-    # result_data=[xmu,Average_Precision,Coverage,OneError,RankingLoss]
+    # result_data=[xmu,Average_Precision,coverage,OneError,RankingLoss]
     # pdb.set_trace()
