@@ -14,69 +14,7 @@ from PIL import Image
 import os
 import cv2
 import copy
-
-def Average_precision(Outputs,test_target):
-    ap_binary=[]
-    num_class,num_instance=Outputs.shape
-    temp_Outputs=np.array([]).reshape((num_class,0))
-    temp_test_target=np.array([]).reshape((test_target.shape[0],0))
-    for i in range(num_instance):
-        temp=test_target[:,i]
-        if np.sum(temp)!=num_class and np.sum(temp)!=-num_class:
-            temp_Outputs=np.hstack((temp_Outputs,Outputs[:,i].reshape(-1,1)))
-            temp_test_target=np.hstack((temp_test_target,temp.reshape(-1,1)))
-    Outputs=copy.deepcopy(temp_Outputs)
-    test_target=copy.deepcopy(temp_test_target)
-    num_class,num_instance=Outputs.shape
-    Label=np.empty(num_instance,dtype=object)
-    not_Label=np.empty(num_instance,dtype=object)
-    for i in range(num_instance):
-        Label[i]=np.array([])
-        not_Label[i]=np.array([])
-    Label_size=np.zeros(num_instance)
-    for i in range(num_instance):
-        temp=test_target[:,i]
-        Label_size[i]=np.sum(temp==np.ones((num_class)))
-        for j in range(num_class):
-            if temp[j]==1:
-                Label[i]=np.hstack((Label[i],np.array([j])))
-            else:
-                not_Label[i]=np.hstack((not_Label[i],np.array([j])))
-    aveprec=0
-    correct_num=0
-    for i in range(num_instance):
-        temp=Outputs[:,i]
-        index=temp.argsort()
-        temp.sort()
-        tempvalue=temp
-        indicator=np.zeros(num_class)
-        for m in range(int(Label_size[i])):
-            res=np.where(index==Label[i][m])[0]
-            if res[0]==num_class-1:
-                correct_num=correct_num+1
-            if res.shape[0]==0:
-                tempvalue=0
-                loc=0
-            else:
-                tempvalue=1
-                loc=res[0]
-            indicator[loc]=1
-        summary=0
-        for m in range(int(Label_size[i])):
-            res=np.where(index==Label[i][m])[0]
-            if res.shape[0]==0:
-                tempvalue=0
-                loc=0
-            else:
-                tempvalue=1
-                loc=res[0]
-            summary+=np.sum(indicator[loc:num_class])/(num_class-loc+0)
-        ap_binary.append(summary/Label_size[i])
-        aveprec+=summary/Label_size[i]
-    Average_Precision=aveprec/num_instance
-    print("Average_Precision:"+str(Average_Precision))
-    Average_Precision1=correct_num*1./num_instance
-    return Average_Precision,Average_Precision1
+from LocalClassifier import *
 
 best_start_change=None
 best_a2=None
@@ -150,7 +88,6 @@ for a2 in range(1):
 
         Y_test=image_vecs
         test_number=Y_test.shape[1]
-        X_test=np.empty((D_all.shape[1],test_number))
         coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm="omp")
         X_test=(coder.transform(Y_test.T)).T
         # X_test=transform(D_all,Y_test,transform_n_nonzero_coefs,None)
@@ -161,7 +98,11 @@ for a2 in range(1):
         #     X_test_part=(coder.transform(Y_test.T)).T
         #     X_test[i*n_atoms:(i+1)*n_atoms]=X_test_part
         the_H=np.dot(W_all,X_test)
-        Average_precision(the_H,labels_mat)
+        AveragePrecision=Average_precision(copy.deepcopy(the_H),labels_mat)
+        RankingLoss=Ranking_loss(copy.deepcopy(the_H),labels_mat)
+        coverage=Coverage(copy.deepcopy(the_H),labels_mat)
+        OneError=One_error(copy.deepcopy(the_H),labels_mat)
+        aa=1
         # right_num=0
         # for i in range(test_number):
         #     pre=the_H[:,i].argmax()

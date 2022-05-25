@@ -73,6 +73,24 @@ def load_img(path):
         im_vec=im.T.reshape(-1,1)
     return im_vec
 
+def load_img_black_white(path):
+    im=Image.open(path)    # 读取文件
+    # img = cv2.imread(path)
+    # gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # sift = cv2.xfeatures2d.SIFT_create()
+    # pdb.set_trace()
+    # _, des = sift.detectAndCompute(gray, None)
+    # pdb.set_trace()
+    im=np.asarray(im,dtype=float)
+    im_dimen=len(im.shape)
+    im_vec=None
+    if im_dimen==3:
+        im=im[:,:,0]
+        im_vec=im.reshape(-1,1)
+    if im_dimen==2:
+        im_vec=im.T.reshape(-1,1)
+    return im_vec
+
 def remove_zero(Y_one):
     pass
     # Y_one_min=Y_one[Y_one!=0.0].min()
@@ -429,7 +447,7 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
     if return_path:
         coefs = np.empty_like(L)
     if start_change==None:
-        start_change=17 #for ethnic
+        start_change=10 #for ethnic start_change=17
     # start_change=10 #for clothes origin:62.87% angle:65.21%
     # YaleB train time (avg. per iteration 10.77s)
     while True:
