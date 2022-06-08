@@ -21,6 +21,24 @@ from mnist import MNIST
 from PIL import Image
 import os
 import cv2
+from sift import *
+from cnn_mnist_pytorch import *
+
+is_sift=True
+
+def load_feature(file_path,length=None):
+    if is_sift:
+        res=sift_fea([file_path],2)[0]
+    else:
+        res=get_feature(file_path)
+    if length is not None:
+        if res.shape[0]>length:
+            res=res[:length]
+        else:
+            temp=np.random.rand(length)
+            temp[:res.shape[0]]=res
+            res=temp
+    return np.array([res]).T
 
 def create_dir_if_not_exist(path):
     if not os.path.exists(path):
@@ -38,10 +56,7 @@ labels=list([])
 file_paths=list([])
 lab_to_ind_dir={}
 ind_to_lab_dir={}
-w=1024
-h=1024
-dir_path="./font"+"/"
-is_not_saw=True
+dir_path="./font"
 if os.path.isdir(dir_path):
     for root, dirs, files in os.walk(dir_path, topdown=False):
         for file_name in files:
@@ -56,7 +71,8 @@ if os.path.isdir(dir_path):
 labels=np.array(labels)
 classes=np.array(classes)
 file_paths=np.array(file_paths)
-
+example_data=load_feature(file_paths[0])
+im_vec_len=example_data.shape[0]
 reg_mul=1
 
 t=time.time()
@@ -65,10 +81,12 @@ np.random.seed(int(t)%100)
 
 data_count=labels.shape[0]
 
-start_init_number=30
+start_init_number=60
 train_number=32
-update_times=100
-im_vec_len=w*h
+update_times=10
+# w=1024
+# h=1024
+# im_vec_len=w*h
 transform_n_nonzero_coefs=30
 
 Y_labelled=np.empty((im_vec_len,start_init_number))
@@ -79,8 +97,7 @@ for i in range(start_init_number):
         print(temp_process)
         sys.stdout.flush()
     temp_process+=1
-    im_vec=load_img_black_white(file_paths[-1-i])
-    im_vec=im_vec/255.
+    im_vec=load_feature(file_paths[-1-i],im_vec_len)
     im_vec=im_vec.T[0]
     Y_labelled[:,ind]=im_vec
     ind+=1
@@ -114,6 +131,7 @@ the_lambda=lambda_init
 DWA_all=None
 
 for update_index in range(update_times):
+    print('update_index:'+str(update_index))
     if update_index==0:
         the_H = np.zeros((n_classes, Y_init.shape[1]), dtype=int)
         the_Q = np.zeros((n_atoms * n_classes, Y_init.shape[1]), dtype=int)
@@ -132,17 +150,26 @@ for update_index in range(update_times):
         A_all = np.dot(Q_Bs, Cs)
         DWA_all = np.vstack((D_all, W_all, A_all))
     for j in range(n_classes):
-        print(j)
-        sys.stdout.flush()
-        if j>50:
+        if j%10==0:
+            print(j)
+            sys.stdout.flush()
+        # sift 原子 标签 训练时间  准确率 迭代次数
+        #      30  50     272秒  0.98  5
+        #      30  200    1136秒 0.525 5
+        #      30  200    2073秒 0.49 10
+        #      30  1000   4967秒 0.124 5
+        #      60  200    7499秒 0.98 10
+        # cnn  原子 标签 训练时间  准确率 迭代次数
+        #      30  200    2176秒  0.295  10
+        if j>200:
             break
         coder = SparseCoder(dictionary=D_all.T,transform_n_nonzero_coefs=transform_n_nonzero_coefs, transform_algorithm='omp')
         label=ind_to_lab_dir[j]
         lab_index=j
         if lab_index>=n_classes:
             break
-        im_vec=load_img_black_white(file_paths[j])
-        im_vec=im_vec/255.
+        im_vec=load_feature(file_paths[j],im_vec_len)
+        # im_vec=load_img_black_white(file_paths[j])
         new_y=np.array(im_vec,dtype = float)
         new_y=preprocessing.normalize(new_y.T, norm='l2').T
         new_y=norm_Ys(new_y)
@@ -171,11 +198,11 @@ for update_index in range(update_times):
     DWA_all=np.vstack((D_all,W_all,A_all))
 end_t=time.time()
 print("train_time : "+str(end_t-start_t))
-np.save('model/D_all_textt_recog_wzz_'+str(w)+'_'+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),D_all)
+np.save('model/D_all_textt_recog_wzz_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),D_all)
 print("D_all saved")
-np.save('model/W_all_textt_recog_wzz_'+str(w)+'_'+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),W_all)
+np.save('model/W_all_textt_recog_wzz_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),W_all)
 print("W_all saved")
-np.save('model/A_all_textt_recog_wzz_'+str(w)+'_'+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),A_all)
+np.save('model/A_all_textt_recog_wzz_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),A_all)
 print("A_all saved")
 
 # np.save(inds_of_file_path_path,inds_of_file_path)

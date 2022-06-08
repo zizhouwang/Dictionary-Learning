@@ -20,6 +20,24 @@ import time
 from mnist import MNIST
 from PIL import Image
 import os
+from sift import *
+from cnn_mnist_pytorch import *
+
+is_sift=True
+
+def load_feature(file_path,length=None):
+    if is_sift:
+        res=sift_fea([file_path],2)[0]
+    else:
+        res=get_feature(file_path)
+    if length is not None:
+        if res.shape[0]>length:
+            res=res[:length]
+        else:
+            temp=np.random.rand(length)
+            temp[:res.shape[0]]=res
+            res=temp
+    return np.array([res]).T
 
 def load_img(path):
     im = Image.open(path)    # 读取文件
@@ -31,83 +49,6 @@ def write_to_file(path,obj):
         w.seek(0)
         w.truncate()
         w.write(json.dumps(obj.tolist()))
-
-def transform_var(Y_one,D_all,D_argmaxs):
-    global n_atoms
-    global n_classes
-    global transform_n_nonzero_coefs
-    X_one_test=np.empty((n_atoms*n_classes,1))
-    start_time=time.time()
-    D_used=np.empty(D_all.shape[1])
-    D_used[:]=-1
-    residual=Y_one
-    X_temp=np.empty(0)
-    for j in range(30):
-        start_time_j=time.time()
-        min_variance=np.inf
-        min_ind=0
-        # variances=np.empty(D_all.shape[1])
-        for k in range(D_all.shape[1]):
-            pass
-            if D_used[k]==1:
-                continue
-            ratios=(D_parts[:,k])/residual[D_argmaxs[:,k]]
-            # ratios=ratios[ratios!=np.nan]
-            ratios=ratios[ratios!=np.inf]
-            # ratios=ratios[ratios!=0.]
-            ratios_mean=ratios.mean()
-            ratios=ratios/ratios_mean
-            cur_var=np.var(ratios)
-            if cur_var<min_variance:
-                min_variance=cur_var
-                min_ind=k
-        first_atmo_index=min_ind
-        D_used[first_atmo_index]=1
-        D_part=D_all[:,D_used==1]
-        D_part_pinv=np.linalg.pinv(D_part)
-        X_temp=np.dot(D_part_pinv,residual)
-        solved_resi=np.dot(D_part,X_temp)
-        residual=residual-solved_resi
-        end_time_j=time.time()
-        sys.stdout.flush()
-    X_one_test[:,0]=0.
-    X_one_test[D_used==1,0]=X_temp
-    end_time=time.time()
-    print(abs(residual).sum())
-    return X_one_test
-
-def transform_normal(Y_one,D_all,D_argmaxs):
-    global n_atoms
-    global n_classes
-    global transform_n_nonzero_coefs
-    X_one_test=np.empty((n_atoms*n_classes,1))
-    start_time=time.time()
-    D_used=np.empty(D_all.shape[1])
-    D_used[:]=-1
-    residual=Y_one
-    X_temp=np.empty(0)
-    for j in range(30):
-        start_time_j=time.time()
-        min_variance=np.inf
-        min_ind=0
-        aa=np.dot(residual,D_all).argsort()
-        for k in range(D_all.shape[1]):
-            min_ind=aa[D_all.shape[1]-k-1]
-            break
-        first_atmo_index=min_ind
-        D_used[first_atmo_index]=1
-        D_part=D_all[:,D_used==1]
-        D_part_pinv=np.linalg.pinv(D_part)
-        X_temp=np.dot(D_part_pinv,residual)
-        solved_resi=np.dot(D_part,X_temp)
-        residual=residual-solved_resi
-        end_time_j=time.time()
-        sys.stdout.flush()
-    X_one_test[:,0]=0.
-    X_one_test[D_used==1,0]=X_temp
-    end_time=time.time()
-    print(abs(residual).sum())
-    return X_one_test
 
 n_classes=0
 classes=list([])
@@ -133,6 +74,8 @@ if os.path.isdir(dir_path):
 labels=np.array(labels)
 classes=np.array(classes)
 file_paths=np.array(file_paths)
+example_data=load_feature(file_paths[0])
+im_vec_len=example_data.shape[0]
 
 reg_mul=1
 
@@ -142,15 +85,15 @@ np.random.seed(int(t)%100)
 
 data_count=labels.shape[0]
 
-start_init_number=30
+start_init_number=60
 train_number=32
 start_test_number=train_number
-test_number=50
-im_vec_len=w*h
+test_number=200
+
+# im_vec_len=w*h
 transform_n_nonzero_coefs=30
 
 """ Parameters in optimization  """
-n_atoms = start_init_number
 n_neighbor = 8
 lamda = 0.5
 beta = 1.
@@ -165,13 +108,13 @@ n_iter_sp = 50
 n_iter_du = 50
 
 maxs_count=100
-D_all=np.load('model/D_all_textt_recog_wzz_'+str(w)+'_'+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy')
+D_all=np.load('model/D_all_textt_recog_wzz_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy')
 D_argmaxs=np.empty((maxs_count,D_all.shape[1]),dtype=int)
 D_parts=np.empty((maxs_count,D_all.shape[1]))
 for i in range(D_all.shape[1]):
     D_argmaxs[:,i]=np.argsort(D_all[:,i])[-maxs_count:]
     D_parts[:,i]=D_all[D_argmaxs[:,i],i]
-W_all=np.load('model/W_all_textt_recog_wzz_'+str(w)+'_'+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy')
+W_all=np.load('model/W_all_textt_recog_wzz_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+'.npy')
 average_accuracy=0.
 indexs=np.arange(test_number)
 Y_test=np.empty((im_vec_len,test_number))
@@ -179,7 +122,7 @@ ind=0
 temp_process=0
 for i in indexs:
     temp_process+=1
-    im_vec=load_img_black_white(file_paths[i])
+    im_vec=load_feature(file_paths[i],im_vec_len)
     im_vec=im_vec/255.
     im_vec=im_vec.T[0]
     Y_test[:,ind]=im_vec
