@@ -109,7 +109,7 @@ def RLSDLA(n_atoms,transform_n_nonzero_coefs,is_find_best):
     #     Ds[class_index]=copy.deepcopy(D)
     # D=Ds.transpose((0,2,1)).reshape(-1,im_vec_len).T
     D = np.random.randn(im_vec_len, n_atoms)
-
+    D_init=copy.deepcopy(D)
 
     if is_find_best is not True:
         D_init=scipy.io.loadmat('D_random_init.mat')['D_init']
@@ -133,7 +133,6 @@ def RLSDLA(n_atoms,transform_n_nonzero_coefs,is_find_best):
     coder = SparseCoder(dictionary=D.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
                         transform_algorithm="omp")
     X_single = np.eye(D.shape[1])
-    # X_single=(coder.transform(Y_init.T)).T
     Bs = np.dot(Y_init, X_single.T)
     Cs = np.linalg.inv(np.dot(X_single, X_single.T))
 
@@ -149,7 +148,7 @@ def RLSDLA(n_atoms,transform_n_nonzero_coefs,is_find_best):
         new_y = np.array(im_vec, dtype=float)
         new_y = new_y.reshape(n_features, 1)
         new_x = (coder.transform(new_y.T)).T
-        # new_x=transform(D,new_y,transform_n_nonzero_coefs)
+        # new_x=transform(D,new_y,transform_n_nonzero_coefs,None)
         new_B = the_B + np.dot(new_y, new_x.T)
         new_C = the_C - (np.matrix(the_C) * np.matrix(new_x) * np.matrix(new_x.T) * np.matrix(the_C)) / (
                     np.matrix(new_x.T) * np.matrix(the_C) * np.matrix(
@@ -172,14 +171,6 @@ def RLSDLA(n_atoms,transform_n_nonzero_coefs,is_find_best):
             # D[:]=D_new_all
             # Ds[:] = D
             # Ds[:] = preprocessing.normalize(Ds.T, norm='l2').T
-
-        # print(abs(D_diff).max())
-        # print(abs(D_diff).mean())
-        # print()
-        # coder = SparseCoder(dictionary=Ds.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
-        #                     transform_algorithm="omp")
-        # X_all = (coder.transform(image_vecs.T)).T
-        # return Ds,X_all
         return Ds
     return train_one_time,D_init,copy.deepcopy(Y_indexs_part)
 
@@ -294,7 +285,7 @@ def MLDLSI2(params,y,atom_n):#[D,A1_mean,Dusage,Uk,bk]
         dD=np.empty(NC,dtype=object)
         # print("r="+str(r)+"\n")
         sys.stdout.flush()
-        if r==6:#incoherent_key
+        if r==incoherent_key:#incoherent_key
             pass
             print("Start reduce coherence")
             D_all = np.hstack((D[0], D[1], D[2], D[3], D[4]))

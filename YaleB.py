@@ -217,11 +217,9 @@ for update_index in range(update_times):
     "wzz")
 end_t=time.time()
 print("train_time : "+str(end_t-start_t))
-np.save('D_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),D_all)
+np.save('model/D_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),D_all)
 print("D_all saved")
-np.save('W_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),W_all)
+np.save('model/W_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),W_all)
 print("W_all saved")
-np.save('A_all_YaleB_wzz_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number),A_all)
-print("A_all saved")
 
 np.save(inds_of_file_path_path,inds_of_file_path)

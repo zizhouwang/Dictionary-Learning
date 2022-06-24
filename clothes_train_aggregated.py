@@ -178,5 +178,3 @@ for a2 in range(1):
     # A_all=A_all.reshape(-1,n_classes*n_atoms).T
     np.save("model/A_all_"+py_file_name+"_"+str(w)+"_"+str(h)+'_'+str(transform_n_nonzero_coefs)+'_'+str(start_init_number)+"_"+str(train_number)+"_"+str(update_times)+"_"+str(a2),A_all)
     print("A_all saved")
-
-    os.system("python3 clothes_test.py "+str(update_times)+" "+str(n_atoms)+" "+str(transform_n_nonzero_coefs))

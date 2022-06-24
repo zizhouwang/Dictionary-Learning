@@ -339,6 +339,7 @@ def SparseRepresentation(X,D,A_mean,param,l1,transform_n_nonzero_coefs):
     coder = SparseCoder(dictionary=D.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
                         transform_algorithm="omp")
     A_test = (coder.transform(X.T)).T
+    # new_x=transform(D,new_y,transform_n_nonzero_coefs,None)
     A_test_nonzero=A_test
     # A_test_nonzero=np.empty((transform_n_nonzero_coefs, X.shape[1]))
     # for i in range(A_test.shape[1]):

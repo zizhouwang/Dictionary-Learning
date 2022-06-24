@@ -3,11 +3,6 @@ import numpy as np
 import numpy.random as rd
 from PIL import Image
 
-aa=rd.rand(3,3)
-bb=np.dot(aa,(5))
-
-img1 = cv2.imread('data/images/book1.jpeg', 0)
-
 def sift_fea(file_list, cluster_nums, randomState=None):
     features = []
     files = file_list #特征检测

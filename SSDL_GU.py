@@ -74,13 +74,7 @@ def load_img(path):
     return im_vec
 
 def load_img_black_white(path):
-    im=Image.open(path)    # 读取文件
-    # img = cv2.imread(path)
-    # gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # sift = cv2.xfeatures2d.SIFT_create()
-    # pdb.set_trace()
-    # _, des = sift.detectAndCompute(gray, None)
-    # pdb.set_trace()
+    im=Image.open(path)
     im=np.asarray(im,dtype=float)
     im_dimen=len(im.shape)
     im_vec=None
@@ -418,7 +412,11 @@ def gram_omp(D_all, the_y, n_nonzero_coefs, tol_0=None, tol=None,
     Gram=np.dot(D_all.T,D_all)
     Xy=np.dot(D_all.T,the_y)
     residual=np.copy(the_y)
-    resi_reci=1./residual
+    resi_reci=None
+    try:
+        resi_reci=1./residual
+    except AttributeError:
+        pass
     resi_reci[resi_reci==np.inf]=0.0
     D_resi=np.dot(D_all.T,resi_reci)
     Gram = Gram.copy('F') if copy_Gram else np.asfortranarray(Gram)

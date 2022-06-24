@@ -94,8 +94,8 @@ n_iter_sp = 50 #number max of iteration in sparse coding
 n_iter_du = 50 # number max of iteration in dictionary update
 n_iter = 15 # number max of general iteration
 
-D_all=np.load('D_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'.npy')
-W_all=np.load('W_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'.npy')
+D_all=np.load('model/D_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'.npy')
+W_all=np.load('model/W_all_YaleB_mulD_'+str(w)+'_'+str(h)+'_'+str(update_times)+'_'+str(transform_n_nonzero_coefs)+'.npy')
 # D_all=np.load('D_all_YaleB_init'+'.npy')
 # W_all=np.load('W_all_YaleB_init'+'.npy')
 # A_all=np.load('A_all_YaleB_'+str(update_times))
