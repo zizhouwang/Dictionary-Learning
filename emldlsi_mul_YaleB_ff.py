@@ -126,20 +126,62 @@ def Eigenface_f(Train_SET,Eigen_NUM):
             disc_set[:,k]=(1./math.sqrt(disc_value[k]))*Train_SET@V[:,k]
     return disc_set,disc_value,Mean_Image
 
-def Dict_Ini(data,nCol,wayInit):
-    m=data.shape[0]
-    if wayInit=="pca":
-        (D,disc_value,Mean_Image)=Eigenface_f(data,nCol-1)
-        D[:,-1]=-D[:,-1]
-        # Mean_Image=preprocessing.normalize(Mean_Image.T, norm='l2').T
-        D=np.hstack((D,Mean_Image))
-    elif wayInit=="random":
-        phi=np.random.randn(m,nCol)
-        D=preprocessing.normalize(phi.T, norm='l2').T
+def create_dir_if_not_exist(path):
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+def load_img(path):
+    im = Image.open(path)    # 读取文件
+    out = im.resize((32, 32))  # 改变尺寸，保持图片高品质
+    im_vec=np.asarray(out,dtype=float).T.reshape(-1,1)
+    return im_vec
+
+classes=list([])
+labels=list([])
+file_paths=list([])
+lab_to_ind_dir={}
+ind_to_lab_dir={}
+for i in range(40):
+    # dir_path="./CroppedYale"
+    dir_path="./CroppedYale/yaleB"+str('%02d' % (i+1))
+    if os.path.isdir(dir_path):
+        classes.extend([i])
+        for root, dirs, files in os.walk(dir_path, topdown=False):
+            for file_name in files:
+                if ".info" in file_name or "Ambient" in file_name or "DEADJOE" in file_name or ".LOG" in file_name:
+                    continue
+                labels.extend([i])
+                file_paths.extend([dir_path+"/"+file_name])
+labels=np.array(labels)
+classes=np.array(classes)
+file_paths=np.array(file_paths)
+
+train_data=list([])
+test_data=list([])
+train_Annotation=list([])
+test_Annotation=list([])
+for index in range(file_paths.shape[0]):
+    path=file_paths[index]
+    im_vec=load_img(path).T[0]
+    sub_index=index%64
+    labels_arr=np.zeros([classes.shape[0]],dtype='int8')
+    if sub_index<32:
+        train_data.append(im_vec)
+        labels_arr=labels_arr+0.5
+        labels_arr[labels[index]]=1
+        train_Annotation.append(labels_arr)
     else:
-        print("wayInit_error")
-        exit()
-    return D
+        test_data.append(im_vec)
+        labels_arr[labels[index]]=1
+        test_Annotation.append(labels_arr)
+
+train_data=np.array(train_data).T
+test_data=np.array(test_data).T
+train_Annotation=np.array(train_Annotation).T
+test_Annotation=np.array(test_Annotation).T
+train_data_reg=preprocessing.normalize(train_data.T, norm='l2').T
+test_data_reg=preprocessing.normalize(test_data.T, norm='l2').T
+
 outside_iter=0
 if is_find_best:
     outside_iter=10000
@@ -148,14 +190,16 @@ else:
 for nonsense in range(outside_iter):
     atom_n_1=300
     transform_n_nonzero_coefs=30
-    data = scipy.io.loadmat('T4.mat')
-    train_data=data['train_data']
-    train_data_reg=preprocessing.normalize(train_data.T, norm='l2').T
-    train_Annotation=data['train_Annotation']
-    test_data=data['test_data']
-    test_data_reg=preprocessing.normalize(test_data.T, norm='l2').T
-    test_Annotation=data['test_Annotation']
-    test_Annotation.dtype="int8"
+    # data = scipy.io.loadmat('T4.mat')
+    # train_data=data['train_data']
+    # train_data_reg=preprocessing.normalize(train_data.T, norm='l2').T
+    # train_data_reg=norm_Ys(train_data_reg)
+    # train_Annotation=data['train_Annotation']
+    # test_data=data['test_data']
+    # test_data_reg=preprocessing.normalize(test_data.T, norm='l2').T
+    # test_data_reg=norm_Ys(test_data_reg)
+    # test_Annotation=data['test_Annotation']
+    # test_Annotation.dtype="int8"
     testNum=test_data.shape[1]
     labelNum=test_Annotation.shape[0]
     test_Annotation= 2*test_Annotation-1
@@ -247,7 +291,6 @@ for nonsense in range(outside_iter):
     coder = SparseCoder(dictionary=D1.T, transform_n_nonzero_coefs=transform_n_nonzero_coefs,
                         transform_algorithm="omp")
     A1_sum1 = (coder.transform(DataXb.T)).T
-    # A1_sum1=transform(D1,DataXb,transform_n_nonzero_coefs,None)
     A1_sum1=preprocessing.normalize(A1_sum1.T, norm='l2').T
     params.training_data   = A1_sum1
     #这里是随机初始化字典
@@ -273,8 +316,7 @@ for nonsense in range(outside_iter):
     r2_times=int(np.random.rand()*50)+50
     if is_find_best is not True:
         r2_times=rr['r2'][0][0]
-    params.max_iter=r2_times
-    params.max_iter=14
+    params.max_iter=r2_times+100
 
 
 

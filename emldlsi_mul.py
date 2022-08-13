@@ -274,7 +274,6 @@ for nonsense in range(outside_iter):
     if is_find_best is not True:
         r2_times=rr['r2'][0][0]
     params.max_iter=r2_times
-    params.max_iter=14
 
 
 
